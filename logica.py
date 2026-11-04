@@ -1256,3 +1256,120 @@ def sala_central(jugador: dict) -> bool:
     return True
  
  
+# ==============================================================================
+# 9. VESTÍBULO: NUEVA PARTIDA O CARGAR PARTIDA
+# ==============================================================================
+ 
+def mostrar_bienvenida() -> None:
+    """
+    Muestra el título del juego y su contexto narrativo (nodo «Cargar Vestíbulo»).
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        None
+    """
+    imprimir_titulo("EL ARCHIVO PERDIDO")
+    print("  Tras un fallo crítico en los sistemas de indexación de la Biblioteca Central")
+    print("  Universitaria, el catálogo maestro quedó fragmentado y corrompido.")
+    print("  Eres un Explorador de Datos: recorre cinco salas, recupera los fragmentos")
+    print(f"  y reconstruye el índice. Empiezas con {VIDA_INICIAL} puntos de vida; "
+          "cada fallo cuesta 1.")
+ 
+ 
+def iniciar_nueva_partida() -> dict:
+    """
+    Rama «Sí» de «¿Iniciar nueva partida?»: pide el nombre, lo valida, registra al jugador
+    en el archivo con registrar_nuevo_jugador() y retorna su estado inicial. Si el nombre
+    ya existe pregunta si se sobrescribe. Si el archivo no se puede escribir, avisa y
+    continúa con un jugador en memoria.
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        dict: Diccionario del jugador (vida 20, puntaje 0.0, nivel 1, inventario vacío).
+    """
+    while True:
+        exito, resultado = validar_nombre_jugador(leer_texto("\n  Ingresa el nombre del nuevo jugador: "))
+        if not exito:
+            print(f"  {resultado}")
+            continue
+        nombre = resultado
+ 
+        sobrescribir = False
+        if existe_jugador(nombre):
+            if not leer_booleano(f"  Ya existe una partida de '{nombre}'. ¿Sobrescribirla? (si/no): "):
+                continue
+            sobrescribir = True
+ 
+        exito, resultado = registrar_nuevo_jugador(nombre, sobrescribir)
+        if exito:
+            print(f"  Bienvenido, {resultado['nombre']}.")
+            return resultado
+        print(f"  Aviso: {resultado}")
+        print("  Jugarás sin guardado automático.")
+        return crear_jugador(nombre, VIDA_INICIAL)
+ 
+ 
+def cargar_partida_guardada():
+    """
+    Rama «No» de «¿Iniciar nueva partida?»: pide el nombre, verifica su validez y su
+    existencia, sincroniza el Vestíbulo con la partida guardada y comprueba que la sala
+    guardada sea válida. Cualquier problema se informa sin detener el juego.
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        dict: Jugador sincronizado, o None si no se pudo cargar (el llamador vuelve al menú).
+    """
+    exito, resultado = validar_nombre_jugador(leer_texto("\n  Ingresa el nombre del jugador: "))
+    if not exito:
+        print(f"  {resultado}")
+        return None
+    nombre = resultado
+ 
+    # Decisión «¿El jugador existe?»: cargar_partida() la resuelve y, si falla, explica el
+    # motivo real (jugador inexistente o archivo dañado) para no confundir ambos casos.
+    exito, resultado = cargar_partida(nombre)
+    if not exito:
+        print(f"  {resultado}")
+        return None
+    jugador = resultado
+ 
+    exito, resultado = obtener_sala_guardada(jugador)
+    if not exito:
+        print(f"  Error: {resultado}")
+        return None
+ 
+    if jugador["vida"] <= 0 or not jugador["partida_activa"]:
+        print(f"  La partida de '{nombre}' ya terminó. Inicia una nueva partida con ese nombre.")
+        return None
+ 
+    print(f"  Partida cargada: {jugador['nombre']} | vida {jugador['vida']} | "
+          f"fragmentos {len(jugador['inventario'])} | continúas en la "
+          f"{NOMBRE_SALAS[resultado]}.")
+    return jugador
+ 
+ 
+def vestibulo() -> dict:
+    """
+    Fase I del juego (Vestíbulo): repite la pregunta «¿Iniciar nueva partida?» hasta que el
+    jugador queda listo, ya sea con una partida nueva o con una cargada.
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        dict: Diccionario del jugador listo para entrar a la sala indicada en 'nivel'.
+    """
+    mostrar_bienvenida()
+    while True:
+        if leer_booleano("\n  ¿Iniciar nueva partida? (si = nueva, no = cargar guardada): "):
+            return iniciar_nueva_partida()
+        jugador = cargar_partida_guardada()
+        if jugador is not None:
+            return jugador
+ 
