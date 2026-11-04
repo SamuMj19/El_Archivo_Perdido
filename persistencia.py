@@ -292,3 +292,49 @@ def registrar_nuevo_jugador(nombre: str, sobrescribir: bool = False, ruta: str =
     return True, jugador
 
 
+# ==============================================================================
+# 3. GUARDADO Y CARGA DE PARTIDA (JSON)
+# ==============================================================================
+
+def _validar_fragmento(fragmento) -> tuple:
+    """
+    Verifica que un fragmento cumpla el modelo de datos (claves 'codigo', 'titulo',
+    'sala' y 'valor') y lo normaliza con crear_fragmento() de estructura.py. Si trae la
+    clave 'ubicacion', la restituye como tupla inmutable (estante, nivel), porque JSON
+    solo almacena listas. Las claves adicionales se conservan sin cambios.
+
+    Parámetros:
+        fragmento (Any): Elemento del inventario a validar (idealmente un dict).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es un nuevo
+               diccionario normalizado; si es False, es un mensaje con el motivo.
+    """
+    if not isinstance(fragmento, dict):
+        return False, "No es un diccionario."
+
+    faltantes = [clave for clave in CLAVES_FRAGMENTO if clave not in fragmento]
+    if faltantes:
+        return False, "Faltan las claves: " + ", ".join(faltantes) + "."
+    if not _es_entero(fragmento["codigo"]):
+        return False, "'codigo' debe ser un número entero."
+    for clave in ("titulo", "sala"):
+        if not isinstance(fragmento[clave], str) or not fragmento[clave].strip():
+            return False, f"'{clave}' debe ser un texto no vacío."
+    if not _es_numero_finito(fragmento["valor"]):
+        return False, "'valor' debe ser un número finito."
+
+    limpio = crear_fragmento(fragmento["codigo"], fragmento["titulo"],
+                             fragmento["sala"], fragmento["valor"])
+
+    if "ubicacion" in fragmento:
+        ubicacion = fragmento["ubicacion"]
+        if (not isinstance(ubicacion, (list, tuple)) or len(ubicacion) != 2
+                or not all(_es_entero(parte) for parte in ubicacion)):
+            return False, "'ubicacion' debe ser un par (estante, nivel) de enteros."
+        limpio["ubicacion"] = (ubicacion[0], ubicacion[1])
+
+    for clave, valor in fragmento.items():
+        if clave not in limpio:
+            limpio[clave] = valor
+    return True, limpio
