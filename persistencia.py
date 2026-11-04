@@ -59,7 +59,7 @@ def _es_entero(valor) -> bool:
 
 def _es_numero_finito(valor) -> bool:
     """
-    Indica si un valor es un número finito, es decir,
+    Indica si un valor es un número (int o float, nunca bool) finito, es decir,
     distinto de NaN e infinito, para que no rompa el ordenamiento de los puntajes.
 
     Parámetros:
@@ -108,7 +108,7 @@ def _describir_error_archivo(error: OSError, ruta: str) -> str:
     Traduce una excepción de entrada/salida en un mensaje claro para el jugador.
 
     Parámetros:
-        error: Excepción capturada al abrir, leer o escribir un archivo.
+        error (OSError): Excepción capturada al abrir, leer o escribir un archivo.
         ruta (str): Ruta del archivo involucrado.
 
     Retorna:
@@ -122,3 +122,41 @@ def _describir_error_archivo(error: OSError, ruta: str) -> str:
         return f"La ruta es una carpeta, no un archivo: {ruta}"
     detalle = error.strerror or str(error)
     return f"Error de lectura o escritura en {ruta}: {detalle}"
+
+
+def _leer_partidas(ruta: str) -> tuple:
+    """
+    Lee el archivo JSON de partidas, un diccionario {clave_jugador: registro}.
+    Un archivo inexistente o vacío se interpreta como «todavía no hay partidas».
+
+    Parámetros:
+        ruta (str): Ruta del archivo JSON de partidas.
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es el
+               diccionario de partidas (vacío si no hay); si es False, es un mensaje de error.
+    """
+    try:
+        with open(ruta, "r", encoding="utf-8") as archivo:
+            contenido = archivo.read()
+    except FileNotFoundError:
+        return True, {}
+    except UnicodeDecodeError:
+        return False, (f"El archivo de partidas está dañado (codificación inválida): {ruta}. "
+                       "Repáralo o elimínalo para continuar.")
+    except OSError as error:
+        return False, _describir_error_archivo(error, ruta)
+
+    if not contenido.strip():
+        return True, {}
+
+    try:
+        partidas = json.loads(contenido)
+    except (json.JSONDecodeError, RecursionError):
+        return False, (f"El archivo de partidas está dañado (JSON inválido): {ruta}. "
+                       "Repáralo o elimínalo para continuar.")
+
+    if not isinstance(partidas, dict):
+        return False, (f"El archivo de partidas tiene un formato inesperado: {ruta}. "
+                       "Repáralo o elimínalo para continuar.")
+    return True, partidas
