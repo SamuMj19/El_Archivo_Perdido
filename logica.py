@@ -1046,3 +1046,213 @@ def sala_sellos(jugador: dict) -> bool:
     return ejecutar_sala_estandar(jugador, 4, reto_sellos)
  
  
+# ==============================================================================
+# 8. SALA 5: CENTRAL («LA RECONSTRUCCIÓN DEL CATÁLOGO») Y CIERRE
+# ==============================================================================
+ 
+def calcular_puntuacion_final(fragmentos_validos: list, vida_restante: int) -> float:
+    """
+    Ejecuta el nodo «Calcular puntuación final»: suma el valor de los fragmentos válidos
+    recuperados y bonifica cada intento (punto de vida) que le quedó al jugador.
+ 
+    Parámetros:
+        fragmentos_validos (list): Fragmentos únicos recuperados (diccionarios con 'valor').
+        vida_restante (int): Vida con la que el jugador termina la partida.
+ 
+    Retorna:
+        float: Puntaje final redondeado a dos decimales.
+    """
+    suma_valores = sum(float(f["valor"]) for f in fragmentos_validos)
+    return round(suma_valores + max(0, int(vida_restante)) * PUNTOS_POR_VIDA, 2)
+ 
+ 
+def calcular_intentos(jugador: dict) -> int:
+    """
+    Ejecuta el nodo «Calcular intentos»: los intentos restantes equivalen a los puntos de
+    vida que conserva el jugador al terminar.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        int: Intentos restantes (mayor o igual a 0).
+    """
+    return max(0, int(jugador["vida"]))
+ 
+ 
+def obtener_fragmentos_para_reconstruccion(jugador: dict) -> list:
+    """
+    Paso 1 (Carga): guarda la partida y vuelve a leer los fragmentos desde el archivo con
+    cargar_fragmentos_recolectados(). Si el archivo no está disponible, usa el inventario
+    en memoria y lo avisa, para que la partida pueda continuar.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        list: Lista de diccionarios de fragmentos, con los códigos repetidos incluidos.
+    """
+    exito_guardado = guardar_con_aviso(jugador)
+    if exito_guardado:
+        exito, resultado = cargar_fragmentos_recolectados(jugador["nombre"])
+        if exito:
+            return resultado
+        print(f"  Aviso: {resultado}")
+    print("  Se usará el inventario en memoria.")
+    return [dict(fragmento) for fragmento in jugador["inventario"]]
+ 
+ 
+def consultar_codigo(arbol, fragmentos: list) -> None:
+    """
+    Paso 6 (Consulta): pide un código y muestra el fragmento hallado junto con el número
+    de comparaciones del ABB frente a la búsqueda secuencial en la lista. Permite repetir.
+ 
+    Parámetros:
+        arbol (ArbolBinarioBusqueda): ABB construido en el Paso 4.
+        fragmentos (list): Lista depurada sobre la que se hace la búsqueda secuencial.
+ 
+    Retorna:
+        None
+    """
+    while True:
+        codigo = leer_entero("\n  Código numérico del fragmento a buscar: ")
+        resultado = comparar_busqueda_abb_vs_lista(arbol, fragmentos, codigo)
+        if resultado["encontrado"]:
+            fragmento = resultado["fragmento"]
+            estante, nivel = fragmento["ubicacion"]
+            print(f"  Fragmento encontrado: #{fragmento['codigo']} «{fragmento['titulo']}» "
+                  f"({fragmento['sala']}), valor {fragmento['valor']}, "
+                  f"estante {estante}, nivel {nivel}.")
+        else:
+            print(f"  No existe ningún fragmento con el código {codigo}.")
+        print(f"  Comparaciones en el ABB:   {resultado['comparaciones_abb']}")
+        print(f"  Comparaciones en la lista: {resultado['comparaciones_lista']}")
+        if not leer_booleano("  ¿Buscar otro código? (si/no): "):
+            return
+ 
+ 
+def mostrar_retroalimentacion(resumen: dict, puntaje: float, jugador: dict) -> None:
+    """
+    Ejecuta el nodo «Mostrar retroalimentación»: resume el desempeño, relaciona cada sala
+    con su estructura y contrasta el ABB balanceado con el degenerado con datos reales
+    de generar_experimento_comparativo().
+ 
+    Parámetros:
+        resumen (dict): Resultado de ejecutar_reconstruccion_catalogo().
+        puntaje (float): Puntaje final calculado.
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        None
+    """
+    total = len(resumen["fragmentos_depurados"])
+    altura_minima = int(math.log2(total)) if total >= 1 else -1
+    imprimir_titulo("RETROALIMENTACIÓN")
+    print(f"  Explorador: {jugador['nombre']}  |  Fragmentos válidos: {total}  |  "
+          f"Vida final: {jugador['vida']}  |  Puntaje: {puntaje:.2f}")
+    print("\n  Qué estructura usaste en cada sala y por qué:")
+    print("    Estanterías -> lista: ordenada, mutable, acceso por índice O(1).")
+    print("    Mapas       -> tupla: inmutable y hashable, ideal para coordenadas fijas.")
+    print("    Fichas      -> diccionario: consulta por clave O(1) amortizado.")
+    print("    Sellos      -> conjunto: unicidad automática y operaciones |, & y -.")
+    print("    Central     -> ABB: búsqueda O(log n) si está balanceado e inorden ordenado.")
+    print(f"\n  Tu ABB tiene altura {resumen['altura_abb']} (la mínima posible con "
+          f"{total} nodos es {altura_minima}).")
+ 
+    print("\n  Comparación de comparaciones al buscar la última clave (peor caso):")
+    print(f"    {'n':>5}  {'h balanc.':>9}  {'ABB bal.':>8}  {'h degener.':>10}  "
+          f"{'ABB degen.':>10}  {'Lista':>6}")
+    for fila in generar_experimento_comparativo():
+        print(f"    {fila['tamano_n']:>5}  {fila['altura_abb_balanceado']:>9}  "
+              f"{fila['comparaciones_abb_balanceado']:>8}  {fila['altura_abb_degenerado']:>10}  "
+              f"{fila['comparaciones_abb_degenerado']:>10}  "
+              f"{fila['comparaciones_lista_secuencial']:>6}")
+    print("  Si los códigos se insertan ya ordenados, el ABB se degenera (h = n - 1) y "
+          "buscar cuesta lo mismo que recorrer la lista.")
+ 
+ 
+def sala_central(jugador: dict) -> bool:
+    """
+    Sala 5 del diagrama: Sala Central. Ejecuta de forma visible los seis pasos de «La
+    Reconstrucción del Catálogo» (carga, depuración con set, ubicación con tuple,
+    construcción del ABB, verificación inorden y consulta comparativa), responde la
+    pregunta de cierre y finaliza con puntaje, persistencia, tabla y retroalimentación.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador (nivel 5, inventario cargado).
+ 
+    Retorna:
+        bool: True si se completó la partida; False si el jugador perdió o el índice no
+              pasó la verificación inorden.
+    """
+    imprimir_titulo(f"SALA 5: SALA CENTRAL — LA RECONSTRUCCIÓN  (vida: {jugador['vida']})")
+ 
+    # Paso 1: carga desde el archivo
+    print("\n  PASO 1 — Carga: leyendo los fragmentos recolectados desde el archivo...")
+    fragmentos = obtener_fragmentos_para_reconstruccion(jugador)
+    if not fragmentos:
+        print("  No hay fragmentos que reconstruir. La partida no puede continuar.")
+        return False
+    mostrar_fragmentos(fragmentos)
+    pausar()
+ 
+    # Pasos 2 a 5: los ejecuta estructura.py; aquí se muestra cada resultado en orden
+    resumen = ejecutar_reconstruccion_catalogo(fragmentos)
+    depurados = resumen["fragmentos_depurados"]
+ 
+    print("\n  PASO 2 — Depuración: eliminando códigos repetidos con un conjunto (set)...")
+    print(f"  Fragmentos cargados: {resumen['total_cargados']}  |  "
+          f"duplicados descartados: {resumen['descartados']}  |  únicos: {len(depurados)}")
+    pausar()
+ 
+    print("\n  PASO 3 — Ubicación: asignando una tupla (estante, nivel) a cada fragmento...")
+    for fragmento in depurados:
+        estante, nivel = fragmento["ubicacion"]
+        print(f"    #{fragmento['codigo']:<4} «{fragmento['titulo']}» -> "
+              f"(estante={estante}, nivel={nivel})")
+    pausar()
+ 
+    print("\n  PASO 4 — Construcción: insertando en el ABB usando 'codigo' como clave...")
+    print(f"  Orden de inserción: {[f['codigo'] for f in depurados]}")
+    print(f"  ABB construido: {resumen['arbol_abb'].total_nodos} nodos, "
+          f"altura {resumen['altura_abb']}.")
+    pausar()
+ 
+    print("\n  PASO 5 — Verificación: recorrido inorden (izquierdo -> raíz -> derecho)...")
+    codigos_inorden = [f["codigo"] for f in resumen["catalogo_inorden"]]
+    print(f"  Inorden: {codigos_inorden}")
+    if not resumen["orden_valido"]:
+        print("  ERROR: la lista inorden NO está estrictamente ordenada. "
+              "El índice reconstruido es inválido y la partida termina.")
+        return False
+    print("  Verificado: la lista está en orden ascendente estricto.")
+    pausar()
+ 
+    print("\n  PASO 6 — Consulta: busca un fragmento y compara el costo de ambas búsquedas.")
+    print(f"  Códigos disponibles: {codigos_inorden}")
+    consultar_codigo(resumen["arbol_abb"], depurados)
+ 
+    if not superar_con_reintentos(jugador, lambda: hacer_pregunta(PREGUNTAS[5])):
+        return False
+ 
+    # Cierre: puntaje, intentos, persistencia, tabla y retroalimentación
+    imprimir_titulo("CIERRE DE LA PARTIDA")
+    puntaje = calcular_puntuacion_final(depurados, jugador["vida"])
+    intentos = calcular_intentos(jugador)
+    jugador["puntaje"] = puntaje
+    jugador["inventario"] = depurados
+    jugador["partida_activa"] = False
+    print(f"  Puntaje final: {puntaje:.2f}  (fragmentos válidos: {len(depurados)}, "
+          f"intentos restantes: {intentos})")
+ 
+    exito, mensaje = guardar_resultado_final(jugador, len(depurados), intentos)
+    print(f"  {mensaje}" if exito else f"  Aviso: {mensaje}")
+ 
+    exito, tabla = cargar_tabla_puntajes(10)
+    print("\n  TABLA DE PUNTAJES (mejores 10)")
+    print(formatear_tabla_puntajes(tabla) if exito else f"  Aviso: {tabla}")
+ 
+    mostrar_retroalimentacion(resumen, puntaje, jugador)
+    return True
+ 
+ 
