@@ -1373,3 +1373,59 @@ def vestibulo() -> dict:
         if jugador is not None:
             return jugador
  
+
+# ==============================================================================
+# 10. FLUJO PRINCIPAL
+# ==============================================================================
+ 
+SALAS = {
+    1: sala_estanterias,
+    2: sala_mapas,
+    3: sala_fichas,
+    4: sala_sellos,
+    5: sala_central,
+}
+ 
+ 
+def jugar_partida(jugador: dict) -> bool:
+    """
+    Recorre las salas desde la sala guardada del jugador hasta la Sala Central (fases II
+    y III). Termina en FIN cuando se completa la partida o el jugador pierde.
+ 
+    Parámetros:
+        jugador (dict): Diccionario del jugador devuelto por el Vestíbulo.
+ 
+    Retorna:
+        bool: True si la partida se completó; False si el jugador perdió.
+    """
+    for numero_sala in range(jugador["nivel"], NUMERO_SALAS + 1):
+        if not SALAS[numero_sala](jugador):
+            imprimir_titulo("FIN DE LA PARTIDA: no lograste reconstruir el archivo")
+            print("  Tu último progreso guardado se conserva; puedes retomarlo cargando tu nombre.")
+            return False
+    imprimir_titulo("FIN: ¡ARCHIVO RECONSTRUIDO!")
+    return True
+ 
+ 
+def main() -> None:
+    """
+    Punto de entrada del juego: configura la consola, ejecuta el Vestíbulo y la partida, y
+    cierra de forma limpia si el jugador interrumpe la entrada (Ctrl+C o Ctrl+D).
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        None
+    """
+    configurar_consola()
+    try:
+        jugador = vestibulo()
+        jugar_partida(jugador)
+    except AbandonarPartida:
+        print("\n  Partida interrumpida. Tu progreso hasta la última sala superada quedó guardado.")
+ 
+ 
+if __name__ == "__main__":
+    main()
+ 
