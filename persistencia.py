@@ -731,3 +731,29 @@ def guardar_resultado_final(jugador: dict, fragmentos_validos: int, intentos: in
         return False, ("La partida se guardó, pero no se pudo actualizar la tabla "
                        f"de puntajes. {resultado}")
     return True, "Resultado guardado y tabla de puntajes actualizada."
+
+
+def formatear_tabla_puntajes(tabla: list) -> str:
+    """
+    Da formato de texto alineado a la tabla de puntajes, lista para imprimirse en la
+    consola en el nodo «Mostrar tabla de puntajes».
+
+    Parámetros:
+        tabla (list): Lista de diccionarios retornada por cargar_tabla_puntajes().
+
+    Retorna:
+        str: Tabla en varias líneas, o un aviso si todavía no hay puntajes.
+    """
+    if not tabla:
+        return "Aún no hay puntajes registrados."
+
+    ancho_nombre = max(len("Jugador"), max(len(fila["nombre"]) for fila in tabla))
+    encabezado = (f"{'#':>3}  {'Jugador':<{ancho_nombre}}  {'Puntaje':>9}  "
+                  f"{'Fragmentos':>10}  {'Intentos':>8}  Fecha")
+    filas = [
+        (f"{posicion:>3}  {fila['nombre']:<{ancho_nombre}}  {fila['puntaje']:>9.2f}  "
+         f"{fila['fragmentos_validos']:>10}  {fila['intentos']:>8}  {fila['fecha']}")
+        for posicion, fila in enumerate(tabla, start=1)
+    ]
+    ancho_total = max(len(encabezado), max(len(fila) for fila in filas))
+    return "\n".join([encabezado, "-" * ancho_total] + filas)
