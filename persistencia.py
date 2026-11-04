@@ -160,3 +160,39 @@ def _leer_partidas(ruta: str) -> tuple:
         return False, (f"El archivo de partidas tiene un formato inesperado: {ruta}. "
                        "Repáralo o elimínalo para continuar.")
     return True, partidas
+
+
+def _escribir_json_atomico(ruta: str, datos: dict) -> tuple:
+    """
+    Escribe un diccionario como JSON de forma segura: primero lo guarda en un archivo
+    temporal y, solo si la escritura terminó bien, lo renombra sobre el destino con
+    os.replace(). Así, un fallo a mitad de la escritura nunca deja el archivo real corrupto.
+
+    Parámetros:
+        ruta (str): Ruta del archivo JSON de destino (se crea la carpeta si no existe).
+        datos (dict): Diccionario serializable a JSON que se desea guardar.
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es la ruta
+               escrita; si es False, es un mensaje de error.
+    """
+    ruta_temporal = ruta + ".tmp"
+    try:
+        directorio = os.path.dirname(ruta)
+        if directorio:
+            os.makedirs(directorio, exist_ok=True)
+        with open(ruta_temporal, "w", encoding="utf-8") as archivo:
+            json.dump(datos, archivo, ensure_ascii=False, indent=4, allow_nan=False)
+        os.replace(ruta_temporal, ruta)
+        return True, ruta
+    except OSError as error:
+        mensaje = _describir_error_archivo(error, ruta)
+    except (TypeError, ValueError) as error:
+        mensaje = f"No se pudieron convertir los datos a JSON: {error}"
+
+    # La escritura falló: se intenta eliminar el archivo temporal incompleto.
+    try:
+        os.remove(ruta_temporal)
+    except OSError:
+        pass
+    return False, mensaje
