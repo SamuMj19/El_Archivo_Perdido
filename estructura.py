@@ -616,3 +616,183 @@ class ArbolBinarioBusqueda:
         altura_izq=self._altura_recursiva(nodo_actual.izquierdo)
         altura_der=self._altura_recursiva(nodo_actual.derecho)
         return 1 + max(altura_izq, altura_der)
+
+# ==============================================================================
+# FUNCIONES PARA LA SALA CENTRAL 
+# ==============================================================================
+
+def verificar_orden_inorden(lista_fragmentos_inorden:list)->bool:
+    """
+    Comprueba que la lista resultante del recorrido inorden
+    del ABB esté en orden estrictamente ascendente según la clave 'codigo'
+    (Paso 5 de la actividad clave en la Sala Central).
+
+    Parámetros:
+        lista_fragmentos_inorden(list): Lista de fragmentos generada por el recorrido inorden.
+
+    Retorna:
+        bool: True si la secuencia está ordenada ascendentemente sin errores, False en caso contrario.
+    """
+    for i in range(len(lista_fragmentos_inorden)-1):
+        codigo_actual=lista_fragmentos_inorden[i]["codigo"]
+        codigo_siguiente=lista_fragmentos_inorden[i+1]["codigo"]
+        if codigo_actual>=codigo_siguiente:
+            return False
+    return True
+
+
+def ejecutar_reconstruccion_catalogo(fragmentos_cargados:list)->dict:
+    """
+    Ejecuta e integra los Pasos 2, 3, 4 y 5 de La Reconstrucción
+    del Catálogo a partir de los fragmentos cargados en el Paso 1.
+
+    Parámetros:
+        fragmentos_cargados(list): Lista de diccionarios leídos desde el archivo de partida.
+
+    Retorna:
+        dict: Resumen estructurado con los resultados de cada paso y la instancia del ABB:
+            - 'total_cargados' (int)
+            - 'descartados' (int)
+            - 'fragmentos_depurados' (list)
+            - 'arbol_abb' (ArbolBinarioBusqueda)
+            - 'catalogo_inorden' (list)
+            - 'orden_valido' (bool)
+            - 'altura_abb' (int)
+    """
+    # Paso 2: Depuración de duplicados mediante un conjunto (set) de códigos
+    depurados, descartados, _ = depurar_fragmentos_duplicados(fragmentos_cargados)
+
+    # Paso 3: Ubicación asociando una tupla inmutable (estante, nivel) a cada fragmento
+    ubicados = asignar_ubicaciones_catalogo(depurados)
+
+    # Paso 4: Construcción del Árbol Binario de Búsqueda (ABB) propio
+    arbol = ArbolBinarioBusqueda()
+    for fragmento in ubicados:
+        arbol.insertar(fragmento)
+
+    # Paso 5: Verificación del recorrido inorden
+    catalogo_inorden = arbol.recorrido_inorden()
+    orden_valido = verificar_orden_inorden(catalogo_inorden)
+
+    return {
+        "total_cargados": len(fragmentos_cargados),
+        "descartados": descartados,
+        "fragmentos_depurados": ubicados,
+        "arbol_abb": arbol,
+        "catalogo_inorden": catalogo_inorden,
+        "orden_valido": orden_valido,
+        "altura_abb": arbol.calcular_altura()
+    }
+
+
+def comparar_busqueda_abb_vs_lista(
+        arbol:ArbolBinarioBusqueda,
+        lista_fragmentos:list,
+        codigo_objetivo:int
+)->dict:
+    """
+    Ejecuta el Paso 6 (Consulta) buscando un fragmento por su código tanto en el
+    Árbol Biario de Búsqueda como de forma secuencial en la lista, contratando
+    el número de comparaciones realzadas en cada estructura.
+
+    Parámetros:
+        arbol(ArbolBinarioBusqueda): Instancia del ABB construido con el catálogo.
+        lista_fragmentos(list): Lista de fragmentos sobre la que se hace búsqueda secuencial.
+        codigo_objetivo(int): Código numérico del fragmento que desea consultar el jugador.
+
+    Retorna:
+        dict: Resultados de la consulta y métricas comparativas:
+            - codigo_buscado: (int)
+            - encontrado: (bool)
+            - fragmento: (dict|None)
+            - comparaciones_abb: (int)
+            - comparaciones_lista: (int)
+            - diferencia_comparaciones: (int)
+    """
+    frag_abb, comp_abb=arbol.buscar(codigo_objetivo)
+    _, comp_lista=buscar_fragmento_secuencial(lista_fragmentos, codigo_objetivo)
+
+    return {
+        "codigo_buscado":int(codigo_objetivo),
+        "encontrado":frag_abb is not None,
+        "fragmento":frag_abb,
+        "comparaciones_abb":comp_abb,
+        "comparaciones_lista":comp_lista,
+        "diferencia_comparaciones":comp_lista-comp_abb
+    }
+
+
+def _generar_orden_balanceado(codigos_ordenados:list)->list:
+    """
+    Una función auxiliar que reordena una secuencia ascendente seleccionando las medianas
+    para producir una inserción balanceada en el ABB.
+
+    Parámetros:
+        codigos_ordenados(list): Lista de enteros ordenada ascendentemente.
+
+    Retorna:
+        list: Lista de enteros dispuesta para minimizar la altura del ABB al insertar.
+    """
+    if not codigos_ordenados:
+        return []
+    medio=len(codigos_ordenados)//2
+    return (
+        [codigos_ordenados[medio]]
+        + _generar_orden_balanceado(codigos_ordenados[:medio])
+        + _generar_orden_balanceado(codigos_ordenados[medio+1:])
+    )
+
+
+def generar_experimento_comparativo(tamanos_catalogo:list=None)->list:
+    """
+    Genera los datos para la tabla comparativa exigida en el informe:
+    1) Búsqueda en ABB balanceado O(log n),
+    2) Búsqueda en ABB degenerado por inserciones ordenadas O(n),
+    3) Búsqueda secuencial en lista O(n).
+
+    Parámetros:
+        tamanos_catalogo(list, opcional): Lista con los tamaños n a evaluar
+        (por defecto [15, 63, 255]).
+
+    Retorna:
+        list: Lista de diccionarios con las métricas de altura y comparaciones para cada tamaño.
+    """
+    if tamanos_catalogo is None:
+        tamanos_catalogo=[15, 63, 255]
+
+    resultados_experimento=[]
+
+    for n in tamanos_catalogo:
+        codigos_ascendentes=list(range(1, n+1))
+        codigos_balanceados=_generar_orden_balanceado(codigos_ascendentes)
+
+        # Caso 1: ABB Balanceado (inserción por medianas)
+        abb_balanceado=ArbolBinarioBusqueda()
+        for c in codigos_balanceados:
+            abb_balanceado.insertar(crear_fragmento(c, f"Frag-{c}", "Central", 10.0))
+
+        # Caso 2: ABB Degenerado (inserción en orden estrictamente ascendente)
+        abb_degenerado=ArbolBinarioBusqueda()
+        lista_secuencial=[]
+        for c in codigos_ascendentes:
+            frag=crear_fragmento(c, f"Frag-{c}", "Central", 10.0)
+            abb_degenerado.insertar(frag)
+            lista_secuencial.append(frag)
+
+        # Ppeor caso de búsqueda exitosa: clave = n
+        clave_prueba=n
+        _, comp_abb_bal=abb_balanceado.buscar(clave_prueba)
+        _, comp_abb_deg=abb_degenerado.buscar(clave_prueba)
+        _, comp_lista=buscar_fragmento_secuencial(lista_secuencial, clave_prueba)
+
+        resultados_experimento.append({
+            "tamano_n":n,
+            "clave_buscada":clave_prueba,
+            "altura_abb_balanceado":abb_balanceado.calcular_altura(),
+            "comparaciones_abb_balanceado":comp_abb_bal,
+            "altura_abb_degenerado":abb_degenerado.calcular_altura(),
+            "comparaciones_abb_degenerado":comp_abb_deg,
+            "comparaciones_lista_secuencial":comp_lista
+        })
+
+    return resultados_experimento
