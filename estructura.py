@@ -433,3 +433,135 @@ def validar_pistas_conjuntos(
         "diferencia": diferencia_a_b,
         "sello_autenticado": sello_maestro_autenticado
     }
+
+# ==============================================================================
+# SALA CENTRAL (SALA 5) CON ÁRBOL BINARIO DE BÚSQUEDA (ABB) PROPIO
+# ==============================================================================
+
+class NodoABB:
+    """
+    Representa un nodo individual dentro del Árbol Binario de Búsqueda (ABB).
+    Almacena el fragmento completo (dict), su clave numérica ('codigo') y las
+    referencias a los subárboles izquierdo y derecho.
+    """
+
+    def __init__(self, fragmento:dict):
+        """
+        Inicializa un nodo del ABB a partir de un diccionario de fragmento.
+
+        Parámetros:
+            fragmento(dict): Diccionario del fragmento que contiene la clave 'codigo'.
+
+        Retorna:
+            None
+        """
+        self.clave:int=int(fragmento["codigo"])
+        self.fragmento:dict=fragmento
+        self.izquierdo:"NodoABB|None"=None
+        self.derecho:"NodoABB|None"=None
+
+
+class ArbolBinarioBusqueda:
+    """
+    Implementación propia de un Árbol Binario de Búsqueda (ABB / BST) sin librerías
+    externas. Mantiene la propiedad de orden.
+    """
+
+    def __init__(self):
+        """
+        Inicializa un Árbol Binario de Búsqueda vacío.
+        """
+        self.raiz:"NodoABB|None"=None
+        self.total_nodos:int=0
+
+    def insertar(self,fragmento:dict)->bool:
+        """
+        Inserta un fragmento en el ABB manteniendo la propiedad de orden según
+        su clave numérica 'codigo'. Los códigos duplicados se ignoran.
+
+        Parámetros:
+            fragmento(dict): Diccionario del fragmento a insertar.
+
+        Retorna:
+            bool: True si el fragmento fue insertado como nuevo nodo, False si ya existía.
+        """
+        if not isinstance(fragmento,dict) or "codigo" not in fragmento:
+            raise ValueError("El fragmento debe ser un diccionario con la clave 'codigo'.")
+
+        if self.raiz is None:
+            self.raiz=NodoABB(fragmento)
+            self.total_nodos+=1
+            return True
+
+        return self._insertar_recursivo(self.raiz, fragmento)
+
+    def _insertar_recursivo(self, nodo_actual: NodoABB, fragmento: dict) -> bool:
+        """
+        Método auxiliar recursivo para ubicar la posición correcta e insertar el nodo.
+
+        Parámetros:
+            nodo_actual(NodoABB): Nodo que se está inspeccionando actualmente.
+            fragmento(dict): Fragmento que se desea insertar.
+
+        Retorna:
+            bool: True si se insertó correctamente, False si la clave estaba duplicada.
+        """
+        nueva_clave=int(fragmento["codigo"])
+
+        if nueva_clave<nodo_actual.clave:
+            if nodo_actual.izquierdo is None:
+                nodo_actual.izquierdo=NodoABB(fragmento)
+                self.total_nodos+=1
+                return True
+            return self._insertar_recursivo(nodo_actual.izquierdo, fragmento)
+
+        elif nueva_clave > nodo_actual.clave:
+            if nodo_actual.derecho is None:
+                nodo_actual.derecho=NodoABB(fragmento)
+                self.total_nodos+=1
+                return True
+            return self._insertar_recursivo(nodo_actual.derecho, fragmento)
+
+        # Si nueva_clave == nodo_actual.clave, es un duplicado y se ignora
+        return False
+
+    def buscar(self, codigo_objetivo:int)->tuple:
+        """
+        Busca un fragmento en el ABB por su 'codigo' y contabiliza el número
+        de comparaciones de claves realizadas durante el descenso.
+
+        Parámetros:
+            codigo_objetivo(int): Código numérico del fragmento a localizar.
+
+        Retorna:
+            tuple: Par (fragmento_encontrado: dict o None, comparaciones: int).
+        """
+        return self._buscar_recursivo(self.raiz, int(codigo_objetivo), 0)
+
+    def _buscar_recursivo(
+            self,
+            nodo_actual:"NodoABB|None",
+            codigo_objetivo:int,
+            comparaciones:int
+    )->tuple:
+        """
+        Método auxiliar recursivo para buscar una clave en el ABB contando comparaciones.
+
+        Parámetros:
+            nodo_actual(NodoABB | None): Nodo actual en la exploración.
+            codigo_objetivo(int): Clave numérica buscada.
+            comparaciones(int): Contador acumulado de comparaciones de claves.
+
+        Retorna:
+            tuple: Par (fragmento_encontrado: dict o None, comparaciones: int).
+        """
+        if nodo_actual is None:
+            return None, comparaciones
+
+        comparaciones+=1
+        if codigo_objetivo==nodo_actual.clave:
+            return nodo_actual.fragmento, comparaciones
+        elif codigo_objetivo<nodo_actual.clave:
+            return self._buscar_recursivo(nodo_actual.izquierdo, codigo_objetivo, comparaciones)
+        else:
+            return self._buscar_recursivo(nodo_actual.derecho, codigo_objetivo, comparaciones)
