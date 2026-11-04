@@ -391,3 +391,38 @@ def _validar_estado_jugador(datos) -> tuple:
         "partida_activa": datos["partida_activa"],
         "inventario": inventario,
     }
+
+
+def guardar_partida(jugador: dict, ruta: str = None) -> tuple:
+    """
+    Guarda (o actualiza) la partida de un jugador en el archivo JSON, indexada por su
+    nombre. Debe invocarse en cada «Desbloquear próxima sala» y antes de entrar a la
+    Sala Central, porque el Paso 1 de la reconstrucción lee el inventario desde el archivo.
+    No modifica el diccionario recibido y conserva intactas las partidas de otros jugadores.
+
+    Parámetros:
+        jugador (dict): Diccionario creado por crear_jugador() con el inventario actual.
+        ruta (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado: str) con un mensaje de confirmación o de error.
+    """
+    ruta = RUTA_PARTIDAS if ruta is None else ruta
+    exito, resultado = _validar_estado_jugador(jugador)
+    if not exito:
+        return False, f"No se pudo guardar la partida. {resultado}"
+    estado = resultado
+
+    exito, resultado = _leer_partidas(ruta)
+    if not exito:
+        return False, resultado
+    partidas = resultado
+
+    registro = dict(estado)
+    registro["ultima_actualizacion"] = _marca_de_tiempo()
+    partidas[_clave_jugador(estado["nombre"])] = registro
+
+    exito, resultado = _escribir_json_atomico(ruta, partidas)
+    if not exito:
+        return False, f"No se pudo guardar la partida. {resultado}"
+    return True, f"Partida de '{estado['nombre']}' guardada correctamente."
