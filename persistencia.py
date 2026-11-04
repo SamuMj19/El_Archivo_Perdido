@@ -617,3 +617,78 @@ def actualizar_tabla_puntajes(nombre: str, puntaje: float, fragmentos_validos: i
     if not exito:
         return False, resultado
     return True, f"Puntaje de '{registro['nombre']}' registrado en la tabla."
+
+
+def _convertir_fila_puntaje(fila: dict) -> dict:
+    """
+    Convierte una fila leída del CSV (todo texto) a sus tipos reales usando
+    convertir_y_validar_tipo() de estructura.py. Las filas incompletas o con datos
+    inválidos se descartan para que una línea dañada no impida mostrar la tabla.
+
+    Parámetros:
+        fila (dict): Fila entregada por csv.DictReader (claves y valores de tipo str).
+
+    Retorna:
+        dict: Registro con los tipos correctos (str, float, int, int, str), o None si la
+              fila es inválida.
+    """
+    if any(fila.get(columna) is None for columna in COLUMNAS_PUNTAJES):
+        return None
+
+    exito_nombre, nombre = validar_nombre_jugador(fila["nombre"])
+    exito_puntaje, puntaje = convertir_y_validar_tipo(fila["puntaje"], float)
+    exito_fragmentos, fragmentos = convertir_y_validar_tipo(fila["fragmentos_validos"], int)
+    exito_intentos, intentos = convertir_y_validar_tipo(fila["intentos"], int)
+    if not (exito_nombre and exito_puntaje and exito_fragmentos and exito_intentos):
+        return None
+    if not _es_numero_finito(puntaje) or fragmentos < 0 or intentos < 0:
+        return None
+
+    return {
+        "nombre": nombre,
+        "puntaje": puntaje,
+        "fragmentos_validos": fragmentos,
+        "intentos": intentos,
+        "fecha": fila["fecha"].strip(),
+    }
+
+
+def cargar_tabla_puntajes(limite: int = None, ruta: str = None) -> tuple:
+    """
+    Lee la tabla de puntajes del archivo CSV y la ordena de mayor a menor puntaje
+    (ante empates se conserva el orden cronológico, porque list.sort() es estable).
+    Si el archivo todavía no existe, retorna una tabla vacía sin considerarlo un error.
+
+    Parámetros:
+        limite (int, opcional): Cantidad máxima de posiciones a retornar (por ejemplo, 10).
+        ruta (str, opcional): Archivo CSV de puntajes (por defecto RUTA_PUNTAJES).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es la lista de
+               diccionarios (nombre, puntaje, fragmentos_validos, intentos, fecha) ordenada;
+               si es False, es un mensaje de error.
+    """
+    ruta = RUTA_PUNTAJES if ruta is None else ruta
+    if limite is not None and (not _es_entero(limite) or limite < 1):
+        return False, "El límite de la tabla debe ser un entero positivo."
+
+    tabla = []
+    try:
+        with open(ruta, "r", encoding="utf-8-sig", newline="") as archivo:
+            for fila in csv.DictReader(archivo):
+                registro = _convertir_fila_puntaje(fila)
+                if registro is not None:
+                    tabla.append(registro)
+    except FileNotFoundError:
+        return True, []
+    except UnicodeDecodeError:
+        return False, f"La tabla de puntajes está dañada (codificación inválida): {ruta}"
+    except OSError as error:
+        return False, _describir_error_archivo(error, ruta)
+    except csv.Error as error:
+        return False, f"La tabla de puntajes está dañada ({error}): {ruta}"
+
+    tabla.sort(key=lambda registro: registro["puntaje"], reverse=True)
+    if limite is not None:
+        tabla = tabla[:limite]
+    return True, tabla
