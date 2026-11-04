@@ -270,7 +270,7 @@ def ordenar_inventario_lista(
     Retorna:
         list: La lista de inventario ordenada.
     """
-    inventario.sort(key=lambda frag: frag.get(clave_orden, 0), reverse=reverso)
+    inventario.sort(key=lambda frag:frag.get(clave_orden, 0), reverse=reverso)
     return inventario
 
 
@@ -286,4 +286,84 @@ def filtrar_fragmentos_por_valor(inventario: list, umbral: float) -> list:
     Retorna:
         list: Nueva lista con los fragmentos que cumplen la condición.
     """
-    return [f for f in inventario if f.get("valor", 0.0) >= float(umbral)]
+    return [f for f in inventario if f.get("valor", 0.0)>=float(umbral)]
+
+# ==============================================================================
+# SALA DE MAPAS (SALA 2) CON TUPLAS INMUTABLES Y DESEMPAQUETADO
+# ==============================================================================
+
+def crear_coordenada(fila:int,columna:int)->tuple:
+    """
+    Crea una tupla inmutable de dos enteros para representar una posición fija
+    (fila, columna) o (estante, nivel) dentro de la biblioteca.
+
+    Parámetros:
+        fila(int): Número de fila o estante.
+        columna(int): Número de columna o nivel.
+
+    Retorna:
+        tuple: Tupla inmutable (fila, columna).
+    """
+    return (int(fila), int(columna))
+
+
+def recorrer_y_validar_ruta_mapa(
+        ruta_mapa:list,
+        zonas_clausuradas:set,
+        dimensiones: tuple=(5, 5)
+)->tuple:
+    """
+    Recorre una secuencia de coordenadas aplicando desempaquetado explícito de tuplas
+    (for fila, columna in ruta_mapa:) para verificar que cada paso esté dentro de los
+    límites fijos del mapa y no pise ninguna zona clausurada.
+
+    Parámetros:
+        ruta_mapa (list): Lista de tuplas (fila, columna) que conforman el recorrido.
+        zonas_clausuradas (set): Conjunto de tuplas (fila, columna) bloqueadas.
+        dimensiones (tuple): Tupla inmutable (max_filas, max_columnas) del mapa.
+
+    Retorna:
+        tuple: Par (ruta_valida: bool, registro_pasos: list) detallando el recorrido.
+    """
+    max_filas, max_columnas = dimensiones
+    registro_pasos=[]
+
+    for fila, columna in ruta_mapa:
+        coordenada_actual=(fila, columna)
+        dentro_de_limites=(0<=fila<max_filas) and (0<=columna<max_columnas)
+        es_zona_segura=coordenada_actual not in zonas_clausuradas
+
+        registro_pasos.append({
+            "coordenada":coordenada_actual,
+            "fila":fila,
+            "columna":columna,
+            "valida":dentro_de_limites and es_zona_segura
+        })
+
+        if not (dentro_de_limites and es_zona_segura):
+            return False, registro_pasos
+
+    return True, registro_pasos
+
+
+def asignar_ubicaciones_catalogo(
+        lista_fragmentos:list,
+        niveles_por_estante:int=5
+)->list:
+    """
+    Asocia a cada fragmento una tupla inmutable (estante, nivel) correspondiente
+    al Paso 3 de la actividad clave «La Reconstrucción del Catálogo».
+
+    Parámetros:
+        lista_fragmentos (list): Lista de fragmentos depurados (diccionarios).
+        niveles_por_estante (int): Cantidad máxima de niveles por cada estante.
+
+    Retorna:
+        list: Lista de fragmentos con la clave 'ubicacion' asociada a su tupla (estante, nivel).
+    """
+    for indice, fragmento in enumerate(lista_fragmentos):
+        estante=(indice//niveles_por_estante)+1
+        nivel=(indice%niveles_por_estante)+1
+        ubicacion_tupla=(estante, nivel)
+        fragmento["ubicacion"]=ubicacion_tupla
+    return lista_fragmentos
