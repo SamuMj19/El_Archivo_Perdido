@@ -757,3 +757,75 @@ def formatear_tabla_puntajes(tabla: list) -> str:
     ]
     ancho_total = max(len(encabezado), max(len(fila) for fila in filas))
     return "\n".join([encabezado, "-" * ancho_total] + filas)
+
+
+# ==============================================================================
+# 6. DEMOSTRACIÓN (solo al ejecutar «python persistencia.py»)
+# ==============================================================================
+
+def _demostracion() -> None:
+    """
+    Recorre el flujo de persistencia del diagrama (registro, guardado, carga, Paso 1 de la
+    Sala Central y tabla de puntajes) en una carpeta temporal, de modo que no se
+    modifiquen los archivos reales de la carpeta «datos».
+
+    Parámetros:
+        Ninguno.
+
+    Retorna:
+        None
+    """
+    import tempfile
+    from estructura import ejecutar_reconstruccion_catalogo
+
+    with tempfile.TemporaryDirectory() as carpeta:
+        ruta_partidas = os.path.join(carpeta, "partidas.json")
+        ruta_puntajes = os.path.join(carpeta, "puntajes.csv")
+
+        print("1) Nombre inválido ->", validar_nombre_jugador("   ")[1])
+
+        exito, jugador = registrar_nuevo_jugador("Ana María", ruta=ruta_partidas)
+        print("2) Jugador nuevo   ->", jugador["nombre"], "| vida:", jugador["vida"])
+
+        # El jugador supera las salas 1 a 4; el último fragmento se repite a propósito.
+        for codigo, titulo, sala in [(30, "Tratado de Listas", "Estanterías"),
+                                     (10, "Plano del Ala Norte", "Mapas"),
+                                     (20, "Ficha de Autores", "Fichas"),
+                                     (40, "Sello Maestro", "Sellos"),
+                                     (40, "Sello Maestro", "Sellos")]:
+            jugador["inventario"].append(crear_fragmento(codigo, titulo, sala, 10.0))
+        jugador["nivel"] = 5
+        print("3) Guardar partida ->", guardar_partida(jugador, ruta_partidas)[1])
+
+        print("4) ¿Existe 'ana maría'? ->", existe_jugador("ana maría", ruta_partidas),
+              "| ¿Existe 'Luis'? ->", existe_jugador("Luis", ruta_partidas))
+        print("5) Jugador inexistente ->", cargar_partida("Luis", ruta_partidas)[1])
+
+        exito, cargado = cargar_partida("ANA MARÍA", ruta_partidas)
+        exito, sala = obtener_sala_guardada(cargado)
+        print("6) Partida cargada ->", cargado["nombre"], "| sala guardada:", sala,
+              "| fragmentos:", len(cargado["inventario"]))
+
+        exito, fragmentos = cargar_fragmentos_recolectados("Ana María", ruta_partidas)
+        resumen = ejecutar_reconstruccion_catalogo(fragmentos)
+        print("7) Paso 1 + 2      -> cargados:", resumen["total_cargados"],
+              "| descartados:", resumen["descartados"],
+              "| orden inorden válido:", resumen["orden_valido"])
+
+        cargado["inventario"] = resumen["fragmentos_depurados"]
+        cargado["puntaje"] = 85.5
+        validos = resumen["total_cargados"] - resumen["descartados"]
+        exito, mensaje = guardar_resultado_final(cargado, validos, 3, ruta_partidas, ruta_puntajes)
+        print("8) Resultado final ->", mensaje)
+
+        exito, recargado = cargar_partida("Ana María", ruta_partidas)
+        ubicacion = recargado["inventario"][0]["ubicacion"]
+        print("9) Ubicación restituida como tupla ->", ubicacion, type(ubicacion).__name__)
+
+        exito, tabla = cargar_tabla_puntajes(10, ruta_puntajes)
+        print("10) Tabla de puntajes:")
+        print(formatear_tabla_puntajes(tabla))
+
+
+if __name__ == "__main__":
+    _demostracion()
