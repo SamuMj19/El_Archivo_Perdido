@@ -558,3 +558,62 @@ def _construir_registro_puntaje(nombre: str, puntaje: float,
         "intentos": intentos,
         "fecha": _marca_de_tiempo(),
     }
+
+
+def _agregar_fila_puntaje(registro: dict, ruta: str = None) -> tuple:
+    """
+    Agrega una fila al final del archivo CSV de puntajes (historial). Si el archivo no
+    existe o está vacío, escribe primero el encabezado. Usa utf-8-sig para que Excel
+    muestre bien las tildes.
+
+    Parámetros:
+        registro (dict): Fila con las claves de COLUMNAS_PUNTAJES.
+        ruta (str, opcional): Archivo CSV de puntajes (por defecto RUTA_PUNTAJES).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es la ruta
+               escrita; si es False, es un mensaje de error.
+    """
+    ruta = RUTA_PUNTAJES if ruta is None else ruta
+    try:
+        directorio = os.path.dirname(ruta)
+        if directorio:
+            os.makedirs(directorio, exist_ok=True)
+        escribir_encabezado = not os.path.isfile(ruta) or os.path.getsize(ruta) == 0
+        with open(ruta, "a", encoding="utf-8-sig", newline="") as archivo:
+            escritor = csv.DictWriter(archivo, fieldnames=COLUMNAS_PUNTAJES)
+            if escribir_encabezado:
+                escritor.writeheader()
+            escritor.writerow(registro)
+        return True, ruta
+    except OSError as error:
+        return False, _describir_error_archivo(error, ruta)
+    except (csv.Error, ValueError) as error:
+        return False, f"No se pudo escribir la tabla de puntajes: {error}"
+
+
+def actualizar_tabla_puntajes(nombre: str, puntaje: float, fragmentos_validos: int,
+                              intentos: int, ruta: str = None) -> tuple:
+    """
+    Agrega un resultado a la tabla histórica de puntajes (archivo CSV), validando antes
+    todos los datos. No sobrescribe resultados anteriores: cada partida terminada suma una fila.
+
+    Parámetros:
+        nombre (str): Nombre del jugador.
+        puntaje (float): Puntuación final de la partida.
+        fragmentos_validos (int): Cantidad de fragmentos válidos recuperados.
+        intentos (int): Número de intentos de la partida.
+        ruta (str, opcional): Archivo CSV de puntajes (por defecto RUTA_PUNTAJES).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado: str) con un mensaje de confirmación o de error.
+    """
+    exito, resultado = _construir_registro_puntaje(nombre, puntaje, fragmentos_validos, intentos)
+    if not exito:
+        return False, resultado
+    registro = resultado
+
+    exito, resultado = _agregar_fila_puntaje(registro, ruta)
+    if not exito:
+        return False, resultado
+    return True, f"Puntaje de '{registro['nombre']}' registrado en la tabla."
