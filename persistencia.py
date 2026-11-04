@@ -43,3 +43,34 @@ CLAVES_JUGADOR = ("nombre", "vida", "puntaje", "nivel", "partida_activa", "inven
 CLAVES_FRAGMENTO = ("codigo", "titulo", "sala", "valor")
 COLUMNAS_PUNTAJES = ("nombre", "puntaje", "fragmentos_validos", "intentos", "fecha")
 
+def _es_entero(valor) -> bool:
+    """
+    Indica si un valor es un entero «real» de Python. Se excluye bool porque en
+    Python True y False son subclases de int y no deben aceptarse como números.
+
+    Parámetros:
+        valor (Any): Valor que se desea comprobar.
+
+    Retorna:
+        bool: True si el valor es de tipo int y no es bool; False en caso contrario.
+    """
+    return isinstance(valor, int) and not isinstance(valor, bool)
+
+
+def _es_numero_finito(valor) -> bool:
+    """
+    Indica si un valor es un número (int o float, nunca bool) finito, es decir,
+    distinto de NaN e infinito, para que no rompa el ordenamiento de los puntajes.
+
+    Parámetros:
+        valor (Any): Valor que se desea comprobar.
+
+    Retorna:
+        bool: True si es un int o float finito; False en caso contrario.
+    """
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return False
+    try:
+        return math.isfinite(valor)
+    except OverflowError:
+        return False
