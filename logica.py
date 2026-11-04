@@ -723,4 +723,3 @@ def sala_estanterias(jugador: dict) -> bool:
         bool: True si se superó la sala; False si el jugador perdió la partida.
     """
     return ejecutar_sala_estandar(jugador, 1, reto_estanterias)
- 
