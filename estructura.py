@@ -565,3 +565,54 @@ class ArbolBinarioBusqueda:
             return self._buscar_recursivo(nodo_actual.izquierdo, codigo_objetivo, comparaciones)
         else:
             return self._buscar_recursivo(nodo_actual.derecho, codigo_objetivo, comparaciones)
+
+    def recorrido_inorden(self)->list:
+        """
+        Ejecuta el recorrido en inorden sobre el ABB, 
+        retornando los fragmentos ordenados ascendentemente por su código.
+
+        Retorna:
+            list: Lista de diccionarios de fragmentos en orden ascendente de código.
+        """
+        resultado=[]
+        self._inorden_recursivo(self.raiz, resultado)
+        return resultado
+
+    def _inorden_recursivo(self, nodo_actual:"NodoABB|None", resultado:list)->None:
+        """
+        Método auxiliar recursivo para acumular los fragmentos en recorrido inorden.
+
+        Parámetros:
+            nodo_actual(NodoABB|None): Nodo actual del recorrido.
+            resultado(list): Lista acumuladora donde se agregan los fragmentos visitados.
+        """
+        if nodo_actual is not None:
+            self._inorden_recursivo(nodo_actual.izquierdo, resultado)
+            resultado.append(nodo_actual.fragmento)
+            self._inorden_recursivo(nodo_actual.derecho, resultado)
+
+    def calcular_altura(self) -> int:
+        """
+        Calcula la altura del árbol (número de aristas en el camino más largo desde
+        la raíz hasta una hoja; un árbol vacío tiene altura -1 y un solo nodo altura 0).
+
+        Retorna:
+            int: Altura actual del Árbol Binario de Búsqueda.
+        """
+        return self._altura_recursiva(self.raiz)
+
+    def _altura_recursiva(self,nodo_actual: "NodoABB|None")->int:
+        """
+        Método auxiliar recursivo para calcular la altura de un subárbol.
+
+        Parámetros:
+            nodo_actual(NodoABB|None): Raíz del subárbol actual.
+
+        Retorna:
+            int: Altura del subárbol.
+        """
+        if nodo_actual is None:
+            return -1
+        altura_izq=self._altura_recursiva(nodo_actual.izquierdo)
+        altura_der=self._altura_recursiva(nodo_actual.derecho)
+        return 1 + max(altura_izq, altura_der)
