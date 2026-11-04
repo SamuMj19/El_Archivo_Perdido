@@ -426,3 +426,69 @@ def guardar_partida(jugador: dict, ruta: str = None) -> tuple:
     if not exito:
         return False, f"No se pudo guardar la partida. {resultado}"
     return True, f"Partida de '{estado['nombre']}' guardada correctamente."
+
+
+def cargar_partida(nombre: str, ruta: str = None) -> tuple:
+    """
+    Ejecuta el nodo «Sincronizar Vestíbulo con el archivo de partida guardada»: busca
+    al jugador por su nombre, valida su registro y reconstruye su diccionario con
+    crear_jugador() de estructura.py, restituyendo también el inventario de fragmentos
+    (con las ubicaciones como tuplas). Si el jugador no existe o el archivo está dañado,
+    informa el error sin detener el juego.
+
+    Parámetros:
+        nombre (str): Nombre del jugador cuya partida se desea cargar.
+        ruta (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es el diccionario
+               del jugador sincronizado (su clave 'nivel' indica la sala guardada); si es
+               False, es un mensaje de error.
+    """
+    ruta = RUTA_PARTIDAS if ruta is None else ruta
+    exito, resultado = validar_nombre_jugador(nombre)
+    if not exito:
+        return False, resultado
+    nombre_valido = resultado
+
+    exito, resultado = _leer_partidas(ruta)
+    if not exito:
+        return False, resultado
+    partidas = resultado
+
+    registro = partidas.get(_clave_jugador(nombre_valido))
+    if registro is None:
+        return False, f"No se encontró ninguna partida guardada para '{nombre_valido}'."
+
+    exito, resultado = _validar_estado_jugador(registro)
+    if not exito:
+        return False, f"La partida guardada de '{nombre_valido}' está dañada. {resultado}"
+    estado = resultado
+
+    jugador = crear_jugador(estado["nombre"], estado["vida"], estado["puntaje"],
+                            estado["nivel"], estado["partida_activa"])
+    jugador["inventario"] = estado["inventario"]
+    return True, jugador
+
+
+def obtener_sala_guardada(jugador: dict) -> tuple:
+    """
+    Ejecuta el nodo «Sincronizar sala guardada por el jugador» y su cadena de decisiones
+    «¿Sala 1?» … «¿Sala 5?»: obtiene la sala a la que debe redirigirse al jugador y
+    detecta el caso de error («Informar sobre el error») si no corresponde a ninguna.
+
+    Parámetros:
+        jugador (dict): Diccionario devuelto por cargar_partida(); su clave 'nivel'
+                        guarda la sala actual (de 1 a NUMERO_SALAS).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es el número
+               de sala (int de 1 a 5); si es False, es un mensaje de error.
+    """
+    if not isinstance(jugador, dict) or not _es_entero(jugador.get("nivel")):
+        return False, "No se pudo determinar la sala guardada del jugador."
+    sala = jugador["nivel"]
+    if not 1 <= sala <= NUMERO_SALAS:
+        return False, (f"La sala guardada ({sala}) no existe: las salas válidas "
+                       f"van de 1 a {NUMERO_SALAS}.")
+    return True, sala
