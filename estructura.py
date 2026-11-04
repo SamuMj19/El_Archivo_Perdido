@@ -341,7 +341,7 @@ def recorrer_y_validar_ruta_mapa(
         })
 
         if not (dentro_de_limites and es_zona_segura):
-            return False, registro_pasos
+            return False,registro_pasos
 
     return True, registro_pasos
 
@@ -367,3 +367,32 @@ def asignar_ubicaciones_catalogo(
         ubicacion_tupla=(estante, nivel)
         fragmento["ubicacion"]=ubicacion_tupla
     return lista_fragmentos
+
+# ==============================================================================
+# SALA DE SELLOS (SALA 4) CON CONJUNTOS Y USO DE OPERACIONES ALGEBRAICAS
+# ==============================================================================
+
+def depurar_fragmentos_duplicados(lista_fragmentos:list)->tuple:
+    """
+    Elimina los fragmentos con códigos repetidos utilizando un conjunto (set)
+    para regiatrar las claves vistas en tiempo O(1) promedio (Paso 2 de Sala Central).
+
+    Parámetros:
+        lista_fragmentOs(list): Lista de fragmentos recolectados (puede contener duplicados).
+
+    Retorna:
+        tuple: Tripla (fragmentos_unicos: list, cantidad_descartados: int, cdigos_unicos: set).
+    """
+    codigos_vistos=set()
+    fragmentos_unicos=[]
+    cantidad_descartados=0
+
+    for fragmento in lista_fragmentos:
+        codigo=fragmento.get("codigo")
+        if codigo not in codigos_vistos:
+            codigos_vistos.add(codigo)
+            fragmentos_unicos.append(fragmento)
+        else:
+            cantidad_descartados+=1
+
+    return fragmentos_unicos, cantidad_descartados, codigos_vistos
