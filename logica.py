@@ -723,3 +723,110 @@ def sala_estanterias(jugador: dict) -> bool:
         bool: True si se superó la sala; False si el jugador perdió la partida.
     """
     return ejecutar_sala_estandar(jugador, 1, reto_estanterias)
+
+
+# ==============================================================================
+# 5. SALA 2: MAPAS (TUPLAS)
+# ==============================================================================
+ 
+def mostrar_mapa(ruta: list = None) -> None:
+    """
+    Dibuja el mapa de la biblioteca: I = inicio, M = meta, X = zona clausurada,
+    * = casilla recorrida y . = casilla libre.
+ 
+    Parámetros:
+        ruta (list, opcional): Lista de tuplas (fila, columna) ya recorridas.
+ 
+    Retorna:
+        None
+    """
+    recorrido = set(ruta) if ruta else set()
+    filas, columnas = DIMENSIONES_MAPA
+    print("         " + " ".join(f"c{c}" for c in range(columnas)))
+    for fila in range(filas):
+        simbolos = []
+        for columna in range(columnas):
+            coordenada = (fila, columna)
+            if coordenada == PUNTO_PARTIDA:
+                simbolos.append("I")
+            elif coordenada == PUNTO_META:
+                simbolos.append("M")
+            elif coordenada in ZONAS_CLAUSURADAS:
+                simbolos.append("X")
+            elif coordenada in recorrido:
+                simbolos.append("*")
+            else:
+                simbolos.append(".")
+        print(f"    f{fila}   " + "  ".join(simbolos))
+ 
+ 
+def reto_mapas(jugador: dict) -> bool:
+    """
+    Reto de la Sala 2: demuestra que una tupla es inmutable y pide una ruta de movimientos
+    que lleve del inicio a la meta sin pisar zonas clausuradas. La ruta se convierte en
+    una lista de tuplas (fila, columna) y se valida recorriéndola con desempaquetado.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si la ruta fue válida y llegó a la meta; False si se agotó la vida.
+    """
+    coordenada = crear_coordenada(*PUNTO_PARTIDA)
+    print(f"\n  Tu posición inicial es la tupla {coordenada}. Intento modificarla: coord[0] = 99")
+    try:
+        coordenada[0] = 99
+    except TypeError as error:
+        print(f"  -> TypeError: {error}. Las coordenadas fijas no se pueden alterar.")
+ 
+    print("\n  Mapa (I = inicio, M = meta, X = zona clausurada):")
+    mostrar_mapa()
+    print("  Movimientos: N = arriba, S = abajo, E = derecha, O = izquierda.")
+    print("  Ejemplo de entrada: SSEE")
+ 
+    def intento_ruta() -> bool:
+        """
+        Pide una ruta, la convierte en tuplas (fila, columna) y la valida desempaquetando cada paso.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        movimientos = leer_movimientos("  Tu ruta: ")
+        ruta = [crear_coordenada(*PUNTO_PARTIDA)]
+        for letra in movimientos:
+            delta_fila, delta_columna = MOVIMIENTOS[letra]
+            fila, columna = ruta[-1]
+            ruta.append(crear_coordenada(fila + delta_fila, columna + delta_columna))
+ 
+        valida, registro = recorrer_y_validar_ruta_mapa(ruta, ZONAS_CLAUSURADAS, DIMENSIONES_MAPA)
+        if not valida:
+            fila, columna = registro[-1]["coordenada"]
+            print(f"  En el paso {len(registro) - 1} llegaste a ({fila}, {columna}): "
+                  "fuera del mapa o zona clausurada.")
+            return False
+        if ruta[-1] != PUNTO_META:
+            fila, columna = ruta[-1]
+            print(f"  Tu ruta termina en ({fila}, {columna}), pero la meta es {PUNTO_META}.")
+            return False
+        print("  Ruta válida. Recorrido:")
+        mostrar_mapa(ruta)
+        return True
+ 
+    return superar_con_reintentos(jugador, intento_ruta)
+ 
+ 
+def sala_mapas(jugador: dict) -> bool:
+    """
+    Sala 2 del diagrama: Sala de Mapas (tuplas).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se superó la sala; False si el jugador perdió la partida.
+    """
+    return ejecutar_sala_estandar(jugador, 2, reto_mapas)
+ 
