@@ -519,3 +519,42 @@ def cargar_fragmentos_recolectados(nombre: str, ruta: str = None) -> tuple:
     if not exito:
         return False, resultado
     return True, resultado["inventario"]
+
+
+# ==============================================================================
+# 5. TABLA DE PUNTAJES (CSV) Y CIERRE DE PARTIDA
+# ==============================================================================
+
+def _construir_registro_puntaje(nombre: str, puntaje: float,
+                                fragmentos_validos: int, intentos: int) -> tuple:
+    """
+    Valida los datos de un resultado final y arma la fila (diccionario) que se agregará
+    a la tabla de puntajes, con la fecha y hora actuales.
+
+    Parámetros:
+        nombre (str): Nombre del jugador.
+        puntaje (float): Puntuación final calculada por la lógica del juego (finita).
+        fragmentos_validos (int): Cantidad de fragmentos válidos recuperados (>= 0).
+        intentos (int): Número de intentos calculado por la lógica del juego (>= 0).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es el diccionario
+               con las claves de COLUMNAS_PUNTAJES; si es False, es un mensaje de error.
+    """
+    exito, resultado = validar_nombre_jugador(nombre)
+    if not exito:
+        return False, resultado
+    if not _es_numero_finito(puntaje):
+        return False, "El puntaje debe ser un número finito."
+    if not _es_entero(fragmentos_validos) or fragmentos_validos < 0:
+        return False, "Los fragmentos válidos deben ser un entero mayor o igual a 0."
+    if not _es_entero(intentos) or intentos < 0:
+        return False, "Los intentos deben ser un entero mayor o igual a 0."
+
+    return True, {
+        "nombre": resultado,
+        "puntaje": round(float(puntaje), 2),
+        "fragmentos_validos": fragmentos_validos,
+        "intentos": intentos,
+        "fecha": _marca_de_tiempo(),
+    }
