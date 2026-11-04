@@ -8,7 +8,7 @@ from estructura import convertir_y_validar_tipo, crear_fragmento, crear_jugador
 
 
 # ==============================================================================
-# configuracion importante para poder empesar
+# configuracion importante para poder empezar
 # ==============================================================================
 
 DIRECTORIO_DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datos")
@@ -22,3 +22,6 @@ CARACTERES_NOMBRE_EXTRA = " -_.'"
 CLAVES_JUGADOR = ("nombre", "vida", "puntaje", "nivel", "partida_activa", "inventario")
 CLAVES_FRAGMENTO = ("codigo", "titulo", "sala", "valor")
 COLUMNAS_PUNTAJES = ("nombre", "puntaje", "fragmentos_validos", "intentos", "fecha")
+
+
+
