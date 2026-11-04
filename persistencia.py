@@ -17,7 +17,6 @@ función pública lanza excepciones por problemas de archivos.
 Si se ejecuta directamente corre una demostración en una
 carpeta temporal, sin modificar los archivos reales de la carpeta datos.
 """
-
 import csv
 import json
 import math
@@ -28,7 +27,7 @@ from estructura import convertir_y_validar_tipo, crear_fragmento, crear_jugador
 
 
 # ==============================================================================
-# configuracion importante para poder empezar
+# 1. CONFIGURACIÓN GENERAL Y UTILIDADES INTERNAS
 # ==============================================================================
 
 DIRECTORIO_DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datos")
@@ -42,6 +41,7 @@ CARACTERES_NOMBRE_EXTRA = " -_.'"
 CLAVES_JUGADOR = ("nombre", "vida", "puntaje", "nivel", "partida_activa", "inventario")
 CLAVES_FRAGMENTO = ("codigo", "titulo", "sala", "valor")
 COLUMNAS_PUNTAJES = ("nombre", "puntaje", "fragmentos_validos", "intentos", "fecha")
+
 
 def _es_entero(valor) -> bool:
     """
@@ -59,7 +59,7 @@ def _es_entero(valor) -> bool:
 
 def _es_numero_finito(valor) -> bool:
     """
-    Indica si un valor es un número (int o float, nunca bool) finito, es decir,
+    Indica si un valor es un número finito, es decir,
     distinto de NaN e infinito, para que no rompa el ordenamiento de los puntajes.
 
     Parámetros:
@@ -74,3 +74,51 @@ def _es_numero_finito(valor) -> bool:
         return math.isfinite(valor)
     except OverflowError:
         return False
+
+
+def _marca_de_tiempo() -> str:
+    """
+    Genera la fecha y hora actuales con el formato AAAA-MM-DD HH:MM:SS.
+
+    Parámetros:
+        Ninguno.
+
+    Retorna:
+        str: Marca de tiempo legible para registros y tabla de puntajes.
+    """
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _clave_jugador(nombre_validado: str) -> str:
+    """
+    Genera la clave con la que se indexa a un jugador dentro del archivo de partidas.
+    Se ignoran las mayúsculas para que «Ana» y «ana» correspondan al mismo jugador.
+
+    Parámetros:
+        nombre_validado (str): Nombre ya normalizado por validar_nombre_jugador().
+
+    Retorna:
+        str: Clave en minúsculas (casefold) usada como clave del diccionario de partidas.
+    """
+    return nombre_validado.casefold()
+
+
+def _describir_error_archivo(error: OSError, ruta: str) -> str:
+    """
+    Traduce una excepción de entrada/salida en un mensaje claro para el jugador.
+
+    Parámetros:
+        error: Excepción capturada al abrir, leer o escribir un archivo.
+        ruta (str): Ruta del archivo involucrado.
+
+    Retorna:
+        str: Mensaje descriptivo del problema.
+    """
+    if isinstance(error, FileNotFoundError):
+        return f"No se encontró el archivo o la carpeta: {ruta}"
+    if isinstance(error, PermissionError):
+        return f"No hay permisos para leer o escribir en: {ruta}"
+    if isinstance(error, IsADirectoryError):
+        return f"La ruta es una carpeta, no un archivo: {ruta}"
+    detalle = error.strerror or str(error)
+    return f"Error de lectura o escritura en {ruta}: {detalle}"
