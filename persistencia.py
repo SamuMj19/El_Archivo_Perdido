@@ -196,3 +196,99 @@ def _escribir_json_atomico(ruta: str, datos: dict) -> tuple:
     except OSError:
         pass
     return False, mensaje
+
+
+# ==============================================================================
+# 2. VESTÍBULO: VALIDACIÓN DEL NOMBRE Y REGISTRO DE JUGADORES
+# ==============================================================================
+
+def validar_nombre_jugador(nombre: str) -> tuple:
+    """
+    Ejecuta el nodo «Verificar validez del nombre» del diagrama de flujo. Comprueba que
+    el nombre sea texto no vacío (reutilizando convertir_y_validar_tipo de estructura.py),
+    normaliza los espacios y aplica las reglas de longitud y de caracteres permitidos.
+
+    Parámetros:
+        nombre (str): Texto ingresado por el usuario (proveniente de input()).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado: str). Si exito es True, 'resultado' es el
+               nombre normalizado; si es False, es el mensaje que explica el rechazo.
+    """
+    if not isinstance(nombre, str):
+        return False, "El nombre debe ser un texto."
+
+    exito, texto = convertir_y_validar_tipo(nombre, str)
+    if not exito:
+        return False, "El nombre no puede estar vacío."
+
+    texto = " ".join(texto.split())
+    if len(texto) > LONGITUD_MAXIMA_NOMBRE:
+        return False, f"El nombre no puede superar los {LONGITUD_MAXIMA_NOMBRE} caracteres."
+    if not texto[0].isalnum():
+        return False, "El nombre debe comenzar con una letra o un número."
+    for caracter in texto:
+        if not (caracter.isalnum() or caracter in CARACTERES_NOMBRE_EXTRA):
+            return False, f"El nombre contiene un carácter no permitido: '{caracter}'."
+    return True, texto
+
+
+def existe_jugador(nombre: str, ruta: str = None) -> bool:
+    """
+    Ejecuta la decisión «¿El jugador existe?» del diagrama de flujo, consultando por
+    clave el diccionario de partidas guardadas (búsqueda O(1) en una tabla hash).
+
+    Parámetros:
+        nombre (str): Nombre del jugador a buscar (no distingue mayúsculas).
+        ruta (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+
+    Retorna:
+        bool: True si hay una partida guardada con ese nombre; False si no existe, si el
+              nombre es inválido o si el archivo no pudo leerse.
+    """
+    ruta = RUTA_PARTIDAS if ruta is None else ruta
+    exito, nombre_valido = validar_nombre_jugador(nombre)
+    if not exito:
+        return False
+    exito, partidas = _leer_partidas(ruta)
+    return exito and _clave_jugador(nombre_valido) in partidas
+
+
+def registrar_nuevo_jugador(nombre: str, sobrescribir: bool = False, ruta: str = None) -> tuple:
+    """
+    Ejecuta el nodo «Guardar nombre del jugador» (rama «nueva partida»): valida el
+    nombre, crea el jugador con crear_jugador() de estructura.py y escribe su registro
+    inicial (vida 20, puntaje 0.0, nivel 1, inventario vacío) en el archivo de partidas.
+
+    Parámetros:
+        nombre (str): Nombre ingresado para el nuevo jugador.
+        sobrescribir (bool): Si es True, reemplaza una partida existente con ese nombre;
+                             si es False (por defecto), rechaza nombres ya registrados.
+        ruta (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es el diccionario
+               del jugador recién creado; si es False, es un mensaje de error.
+    """
+    ruta = RUTA_PARTIDAS if ruta is None else ruta
+    exito, resultado = validar_nombre_jugador(nombre)
+    if not exito:
+        return False, resultado
+    nombre_valido = resultado
+
+    exito, resultado = _leer_partidas(ruta)
+    if not exito:
+        return False, resultado
+    partidas = resultado
+
+    if _clave_jugador(nombre_valido) in partidas and not sobrescribir:
+        return False, (f"Ya existe una partida guardada para '{nombre_valido}'. "
+                       "Elige otro nombre o carga esa partida.")
+
+    jugador = crear_jugador(nombre_valido)
+    exito, mensaje = guardar_partida(jugador, ruta)
+    if not exito:
+        return False, mensaje
+    return True, jugador
+
+
