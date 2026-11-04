@@ -573,5 +573,3 @@ def generar_eco_duplicado(jugador: dict) -> None:
     insertar_fragmento_lista(jugador["inventario"], eco)
     print(f"  El índice corrupto dejó una COPIA repetida del fragmento #{eco['codigo']} "
           "en tu inventario. La Sala Central se encargará de depurarla.")
- 
- 
