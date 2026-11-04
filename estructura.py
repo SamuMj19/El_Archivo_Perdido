@@ -396,3 +396,40 @@ def depurar_fragmentos_duplicados(lista_fragmentos:list)->tuple:
             cantidad_descartados+=1
 
     return fragmentos_unicos, cantidad_descartados, codigos_vistos
+
+def validar_pistas_conjuntos(
+        pistas_sala_a:list,
+        pistas_sala_b:list,
+        pistas_corruptas:list=None
+)->dict:
+    """
+    Convierte lotes de pistas en conjutos para eliminar duplicados y aplica
+    operaciones algebraicas de unión (|), intersección (&) y diferencia (-) para
+    autenticar el sello maestro en la Sala de Sellos.
+
+    Parámetros:
+        pistas_sala_a(list): Primer lote de sellos recolectados.
+        pistas_sala_b(list): Segundo lote de sellos recolectados.
+        pistas_corruptas(list): Lote de sellos falsos o dañados a excluir.
+
+    Retorna:
+        dict: Diccionario con los conjuntos resultantes de unión, intersección,
+        diferencia y el sello maestro autenticado.
+    """
+    conjunto_a=set(pistas_sala_a)
+    conjunto_b=set(pistas_sala_b)
+    conjunto_corrupto=set(pistas_corruptas) if pistas_corruptas is not None else set()
+
+    union_pistas=conjunto_a|conjunto_b
+    interseccion_pistas=conjunto_a&conjunto_b
+    diferencia_a_b=conjunto_a-conjunto_b
+    sello_maestro_autenticado=interseccion_pistas-conjunto_corrupto
+
+    return {
+        "conjunto_a": conjunto_a,
+        "conjunto_b": conjunto_b,
+        "union": union_pistas,
+        "interseccion": interseccion_pistas,
+        "diferencia": diferencia_a_b,
+        "sello_autenticado": sello_maestro_autenticado
+    }
