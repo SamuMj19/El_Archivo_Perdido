@@ -692,3 +692,42 @@ def cargar_tabla_puntajes(limite: int = None, ruta: str = None) -> tuple:
     if limite is not None:
         tabla = tabla[:limite]
     return True, tabla
+
+
+def guardar_resultado_final(jugador: dict, fragmentos_validos: int, intentos: int,
+                            ruta_partidas: str = None, ruta_puntajes: str = None) -> tuple:
+    """
+    Ejecuta el nodo «Guardar resultado y actualizar tabla de puntajes»: guarda el estado
+    final del jugador y agrega su resultado a la tabla histórica. Los datos se validan
+    ANTES de escribir, para no dejar la partida guardada y la tabla desincronizadas.
+    El puntaje registrado es el de jugador["puntaje"], que la lógica del juego ya debió
+    calcular en «Calcular puntuación final». No modifica el diccionario recibido.
+
+    Parámetros:
+        jugador (dict): Diccionario del jugador con su puntaje final e inventario.
+        fragmentos_validos (int): Cantidad de fragmentos válidos recuperados.
+        intentos (int): Número de intentos calculado por la lógica del juego.
+        ruta_partidas (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+        ruta_puntajes (str, opcional): Archivo CSV de puntajes (por defecto RUTA_PUNTAJES).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado: str) con un mensaje de confirmación o de error.
+    """
+    if not isinstance(jugador, dict):
+        return False, "El jugador debe ser un diccionario."
+
+    exito, resultado = _construir_registro_puntaje(jugador.get("nombre"), jugador.get("puntaje"),
+                                                   fragmentos_validos, intentos)
+    if not exito:
+        return False, f"No se pudo guardar el resultado. {resultado}"
+    registro = resultado
+
+    exito, resultado = guardar_partida(jugador, ruta_partidas)
+    if not exito:
+        return False, resultado
+
+    exito, resultado = _agregar_fila_puntaje(registro, ruta_puntajes)
+    if not exito:
+        return False, ("La partida se guardó, pero no se pudo actualizar la tabla "
+                       f"de puntajes. {resultado}")
+    return True, "Resultado guardado y tabla de puntajes actualizada."
