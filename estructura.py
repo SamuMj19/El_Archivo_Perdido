@@ -1,26 +1,6 @@
-def crear_fragmento(codigo:int,titulo:str,sala:str,valor:float) -> dict:
-    """
-    Crea y retorna un diccionario que representa los fragmentos del juego.
-    
-    Parámetros del diccionario:
-        codigo(int): Código único del fragmento.
-        titulo(str): Nombre del fragmento.
-        sala(str): Sala en la que se encuentra el fragmento.
-        valor(float): Valor de relevancia del fragmento.
-    Retorna:
-        dict: Diccionario que incluye las cuatro claves requeridas para los fragmentos.
-    """
-    fragmento = {
-        "codigo": codigo,
-        "titulo": titulo,
-        "sala": sala,
-        "valor": valor
-    }
-    return fragmento
-
-# ====================================================================================
-# 1. VESTÍBULO (INICIAR PARTIDA, VARIABLES BASE DEL JUGADOR Y FUNCIONES DE VALIDACIÓN)
-# ====================================================================================
+# ===================================================================================
+# VESTÍBULO (INICIAR PARTIDA, VARIABLES BASE DEL JUGADOR Y FUNCIONES DE VALIDACIÓN)
+# ===================================================================================
 
 def crear_jugador(
         nombre:str,
@@ -104,3 +84,50 @@ def convertir_y_validar(entrada_usuario:str, tipo_esperado:type):
             raise ValueError("Tipo de dato no soportado.")
     except ValueError:
         return False, None
+
+# =============================================================================
+# CARGAR MODELO DEL FRAGMENTO Y SALA 3 (SALA DE FICHAS) CON DICCIONARIOS
+# =============================================================================
+
+def crear_fragmento(codigo:int,titulo:str,sala:str,valor:float)->dict:
+    """
+    Crea y retorna un diccionario que representa los fragmentos del juego.
+    
+    Parámetros del diccionario:
+        codigo(int): Código único del fragmento.
+        titulo(str): Nombre del fragmento.
+        sala(str): Sala en la que se encuentra el fragmento.
+        valor(float): Valor de relevancia del fragmento.
+    
+    Retorna:
+        dict: Diccionario que incluye las cuatro claves requeridas para los fragmentos.
+    """
+    fragmento = {
+        "codigo": codigo,
+        "titulo": titulo,
+        "sala": sala,
+        "valor": valor
+    }
+    return fragmento
+
+
+def consultar_atributo_fragmento(
+        fragmento:dict,
+        clave:str,
+        valor_por_defecto:str="No registrado"
+):
+    """
+    Consulta de forma segura en tiempo O(1) amortizado un atributo dentro de un
+    fragmentO, manejando claves inexistentes sin detener el programa.
+
+    Parámetros:
+        fragmento(dict): Diccionario que representa el fragmento.
+        clave(str): Nombre de la clave que se desea consultar.
+        valor_por_defecto(str): Valor retornado si la clave no existe en el diccionario.
+    
+    Retorna:
+        Any: El valor asociado a la clave solicitada o el mensaje por defecto.
+    """
+    if not isinstance(fragmento, dict):
+        return valor_por_defecto
+    return fragmento.get(clave, valor_por_defecto)
