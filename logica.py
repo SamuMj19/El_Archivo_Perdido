@@ -829,4 +829,124 @@ def sala_mapas(jugador: dict) -> bool:
         bool: True si se superó la sala; False si el jugador perdió la partida.
     """
     return ejecutar_sala_estandar(jugador, 2, reto_mapas)
+
+ 
+# ==============================================================================
+# 6. SALA 3: FICHAS (DICCIONARIOS)
+# ==============================================================================
+ 
+def reto_fichas(jugador: dict) -> bool:
+    """
+    Reto de la Sala 3: consultar atributos por clave, detectar una ficha con una clave
+    ausente y reconocer un código inexistente, sin que el programa colapse (uso de
+    .get() y de captura de KeyError).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se completaron los tres pasos; False si se agotó la vida.
+    """
+    catalogo = construir_catalogo_fichas([dict(ficha) for ficha in FICHAS_BASE])
+    print("\n  Catálogo de fichas (código -> ficha):")
+    for codigo, ficha in catalogo.items():
+        print(f"    {codigo}: {ficha}")
+ 
+    # Paso A: consulta por clave
+    codigo_a = random.choice([c for c, f in catalogo.items() if "titulo" in f])
+    print("\n  Paso A (consulta por clave): lee el catálogo.")
+ 
+    def intento_valor() -> bool:
+        """
+        Pide el valor de una ficha y lo compara con el obtenido por consulta de clave.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        respuesta = leer_flotante(f"  ¿Cuál es el 'valor' de la ficha {codigo_a}? ")
+        esperado = float(consultar_atributo_fragmento(catalogo[codigo_a], "valor"))
+        if abs(respuesta - esperado) > 1e-9:
+            print("  Ese no es el valor registrado en la ficha.")
+            return False
+        print("  Correcto: catalogo[codigo]['valor'] se resuelve en O(1).")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_valor):
+        return False
+ 
+    # Paso B: clave ausente en una ficha
+    print("\n  Paso B (clave ausente): una ficha no tiene la clave 'titulo'.")
+ 
+    def intento_ficha_danada() -> bool:
+        """
+        Pide el código de la ficha sin la clave 'titulo' y demuestra .get() y KeyError.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        codigo = leer_entero("  Código de la ficha sin 'titulo': ")
+        ficha = catalogo.get(codigo)
+        if ficha is None:
+            print("  Ese código no existe en el catálogo.")
+            return False
+        encontrado, resultado = consultar_ficha_con_excepcion(ficha, "titulo")
+        if encontrado:
+            print("  Esa ficha sí tiene título.")
+            return False
+        print(f"  Correcto. ficha.get('titulo', 'No registrado') -> "
+              f"{consultar_atributo_fragmento(ficha, 'titulo')!r}")
+        print(f"  Y con ficha['titulo'] se captura KeyError: {resultado}")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_ficha_danada):
+        return False
+ 
+    # Paso C: código inexistente
+    existentes = random.sample(list(catalogo), 2)
+    inexistente = random.choice([c for c in range(900, 1000) if c not in catalogo])
+    opciones = existentes + [inexistente]
+    random.shuffle(opciones)
+    print("\n  Paso C (código inexistente): uno de estos códigos NO está en el catálogo.")
+    for numero, codigo in enumerate(opciones, start=1):
+        print(f"    {numero}) {codigo}")
+ 
+    def intento_inexistente() -> bool:
+        """
+        Pide cuál de tres códigos no existe en el catálogo y demuestra la consulta segura.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        eleccion = leer_entero("  ¿Cuál no existe? (1-3): ", 1, len(opciones))
+        codigo = opciones[eleccion - 1]
+        if codigo in catalogo:
+            print("  Ese código sí existe en el catálogo.")
+            return False
+        titulo = consultar_atributo_fragmento(catalogo.get(codigo), "titulo")
+        print(f"  Correcto. catalogo.get({codigo}) -> None; consultar su título da {titulo!r}.")
+        return True
+ 
+    return superar_con_reintentos(jugador, intento_inexistente)
+ 
+ 
+def sala_fichas(jugador: dict) -> bool:
+    """
+    Sala 3 del diagrama: Sala de Fichas (diccionarios).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se superó la sala; False si el jugador perdió la partida.
+    """
+    return ejecutar_sala_estandar(jugador, 3, reto_fichas)
  
