@@ -385,4 +385,193 @@ def mostrar_fragmentos(fragmentos: list) -> None:
     for posicion, fragmento in enumerate(fragmentos):
         print(f"  {posicion:>3}  {fragmento['codigo']:>6}  "
               f"{fragmento['titulo']:<32}  {fragmento['valor']:>6.1f}")
+
+ 
+# ==============================================================================
+# 3. NÚCLEO COMÚN: VIDA, REINTENTOS, PREGUNTAS Y GUARDADO
+# ==============================================================================
+ 
+def penalizar(jugador: dict) -> bool:
+    """
+    Ejecuta el nodo «Vida -= 1» y la decisión «Vida > 0» del diagrama, usando
+    actualizar_vida_jugador() de estructura.py.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si el jugador conserva vida (puede reintentar); False si la agotó.
+    """
+    sigue_con_vida = actualizar_vida_jugador(jugador, -1)
+    print(f"  Fallaste: vida -= 1. Vida restante: {jugador['vida']}")
+    if not sigue_con_vida:
+        print("  Te quedaste sin vida.")
+    return sigue_con_vida
+ 
+ 
+def superar_con_reintentos(jugador: dict, intento) -> bool:
+    """
+    Implementa el bucle del diagrama «¿Reto cumplido? / ¿Respuesta correcta? -> No ->
+    Vida -= 1 -> Vida > 0 -> reintentar»: repite el intento hasta que se supere o se
+    agote la vida.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+        intento (callable): Función sin argumentos que ejecuta un intento y retorna
+                            True si fue exitoso o False si falló.
+ 
+    Retorna:
+        bool: True si el intento se superó; False si el jugador se quedó sin vida.
+    """
+    while True:
+        if intento():
+            return True
+        if not penalizar(jugador):
+            return False
+ 
+ 
+def hacer_pregunta(pregunta: dict) -> bool:
+    """
+    Formula una pregunta conceptual de opción múltiple (nodo «Iniciar pregunta
+    conceptual»). Las opciones se barajan en cada intento para no memorizar la letra.
+ 
+    Parámetros:
+        pregunta (dict): Diccionario con 'enunciado', 'opciones' (la posición 0 es la
+                         correcta) y 'explicacion'.
+ 
+    Retorna:
+        bool: True si el jugador eligió la opción correcta; False en caso contrario.
+    """
+    opciones = list(pregunta["opciones"])
+    correcta = opciones[0]
+    random.shuffle(opciones)
+    letras = "ABCD"
+ 
+    print()
+    print(f"  PREGUNTA CONCEPTUAL: {pregunta['enunciado']}")
+    for letra, opcion in zip(letras, opciones):
+        print(f"    {letra}) {opcion}")
+ 
+    while True:
+        respuesta = leer_texto("  Tu respuesta (A-D): ").strip().upper()
+        if len(respuesta) == 1 and respuesta in letras[:len(opciones)]:
+            elegida = opciones[letras.index(respuesta)]
+            break
+        if respuesta.isdigit() and 1 <= int(respuesta) <= len(opciones):
+            elegida = opciones[int(respuesta) - 1]
+            break
+        print("  Entrada inválida: responde con una letra de la A a la D.")
+ 
+    if elegida == correcta:
+        print(f"  ¡Correcto! {pregunta['explicacion']}")
+        return True
+    print("  Respuesta incorrecta.")
+    return False
+ 
+ 
+def guardar_con_aviso(jugador: dict) -> bool:
+    """
+    Guarda la partida con guardar_partida() de persistencia.py. Si falla, informa el
+    motivo y el juego continúa en memoria sin interrumpirse.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se guardó; False si hubo un error (ya informado al jugador).
+    """
+    exito, mensaje = guardar_partida(jugador)
+    if exito:
+        print("  Progreso guardado.")
+    else:
+        print(f"  Aviso: {mensaje}")
+        print("  El juego continúa sin guardar este avance.")
+    return exito
+ 
+ 
+def desbloquear_proxima_sala(jugador: dict, sala_actual: int) -> None:
+    """
+    Ejecuta el nodo «Desbloquear próxima sala»: avanza el nivel del jugador y guarda
+    la partida, que es el punto de reanudación al cargar.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+        sala_actual (int): Número de la sala que se acaba de superar (1 a 4).
+ 
+    Retorna:
+        None
+    """
+    jugador["nivel"] = sala_actual + 1
+    print(f"\n  Sala superada. Se desbloquea: {NOMBRE_SALAS[jugador['nivel']]}.")
+    guardar_con_aviso(jugador)
+ 
+ 
+def ejecutar_sala_estandar(jugador: dict, numero_sala: int, reto) -> bool:
+    """
+    Recorre el ciclo común de las salas 1 a 4 según el diagrama: reto técnico ->
+    añadir fragmento al inventario -> pregunta conceptual -> desbloquear próxima sala.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+        numero_sala (int): Número de la sala (1 a 4).
+        reto (callable): Función reto(jugador) -> bool propia de la sala.
+ 
+    Retorna:
+        bool: True si la sala se superó; False si el jugador perdió la partida.
+    """
+    imprimir_titulo(f"SALA {numero_sala}: {NOMBRE_SALAS[numero_sala].upper()}  "
+                    f"(vida: {jugador['vida']})")
+    print(INTRODUCCIONES[numero_sala])
+ 
+    if not reto(jugador):
+        return False
+ 
+    fragmento = crear_recompensa(numero_sala)
+    insertar_fragmento_lista(jugador["inventario"], fragmento)
+    print(f"\n  Reto cumplido. Fragmento recuperado: #{fragmento['codigo']} "
+          f"«{fragmento['titulo']}» (valor {fragmento['valor']}).")
+    if numero_sala == 4:
+        generar_eco_duplicado(jugador)
+ 
+    if not superar_con_reintentos(jugador, lambda: hacer_pregunta(PREGUNTAS[numero_sala])):
+        return False
+ 
+    desbloquear_proxima_sala(jugador, numero_sala)
+    return True
+ 
+ 
+def crear_recompensa(numero_sala: int) -> dict:
+    """
+    Construye con crear_fragmento() de estructura.py el fragmento que otorga una sala.
+ 
+    Parámetros:
+        numero_sala (int): Número de la sala (1 a 4).
+ 
+    Retorna:
+        dict: Fragmento con las claves 'codigo', 'titulo', 'sala' y 'valor'.
+    """
+    codigo, titulo, valor = RECOMPENSAS[numero_sala]
+    return crear_fragmento(codigo, titulo, NOMBRE_SALAS[numero_sala], valor)
+ 
+ 
+def generar_eco_duplicado(jugador: dict) -> None:
+    """
+    Simula la corrupción del índice: deja en el inventario una copia repetida del
+    fragmento anterior, de modo que el Paso 2 de la Sala Central tenga un duplicado real
+    que depurar con un conjunto.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador (inventario con al menos 2 fragmentos).
+ 
+    Retorna:
+        None
+    """
+    anteriores = jugador["inventario"][:-1]
+    if not anteriores:
+        return
+    eco = dict(anteriores[-1])
+    insertar_fragmento_lista(jugador["inventario"], eco)
+    print(f"  El índice corrupto dejó una COPIA repetida del fragmento #{eco['codigo']} "
+          "en tu inventario. La Sala Central se encargará de depurarla.")
+ 
  
