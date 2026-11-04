@@ -949,4 +949,100 @@ def sala_fichas(jugador: dict) -> bool:
         bool: True si se superó la sala; False si el jugador perdió la partida.
     """
     return ejecutar_sala_estandar(jugador, 3, reto_fichas)
+
+ 
+# ==============================================================================
+# 7. SALA 4: SELLOS (CONJUNTOS)
+# ==============================================================================
+ 
+def reto_sellos(jugador: dict) -> bool:
+    """
+    Reto de la Sala 4: depurar lotes de sellos con conjuntos. El jugador cuenta los sellos
+    distintos de un lote (unicidad), halla los sellos comunes a dos lotes (intersección)
+    y autentica el sello maestro descartando los corruptos (diferencia).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se completaron los tres pasos; False si se agotó la vida.
+    """
+    analisis = validar_pistas_conjuntos(LOTE_SELLOS_A, LOTE_SELLOS_B, SELLOS_CORRUPTOS)
+    print(f"\n  Lote A: {LOTE_SELLOS_A}")
+    print(f"  Lote B: {LOTE_SELLOS_B}")
+    print(f"  Sellos corruptos: {SELLOS_CORRUPTOS}")
+ 
+    def intento_distintos() -> bool:
+        """
+        Pide la cantidad de sellos distintos del lote A (unicidad de un set).
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        respuesta = leer_entero("\n  Paso A: ¿cuántos sellos DISTINTOS hay en el lote A? ", 0)
+        if respuesta != len(analisis["conjunto_a"]):
+            print("  Recuerda: un conjunto elimina automáticamente los repetidos.")
+            return False
+        print(f"  Correcto: set(lote_a) = {sorted(analisis['conjunto_a'])}.")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_distintos):
+        return False
+ 
+    def intento_interseccion() -> bool:
+        """
+        Pide los sellos comunes a ambos lotes y los compara con la intersección A & B.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        respuesta = leer_conjunto_enteros("\n  Paso B: ¿qué sellos aparecen en AMBOS lotes (A & B)? ")
+        if respuesta != analisis["interseccion"]:
+            print("  Esa no es la intersección de los dos lotes.")
+            return False
+        print(f"  Correcto: A & B = {sorted(analisis['interseccion'])}.")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_interseccion):
+        return False
+ 
+    def intento_autenticar() -> bool:
+        """
+        Pide los sellos que quedan sin los corruptos y los compara con la diferencia de conjuntos.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        respuesta = leer_conjunto_enteros(
+            "\n  Paso C: quita los sellos corruptos de esa intersección. ¿Cuáles quedan? ")
+        if respuesta != analisis["sello_autenticado"]:
+            print("  Esa no es la diferencia (A & B) - corruptos.")
+            return False
+        print(f"  Correcto: sellos autenticados = {sorted(analisis['sello_autenticado'])}.")
+        return True
+ 
+    return superar_con_reintentos(jugador, intento_autenticar)
+ 
+ 
+def sala_sellos(jugador: dict) -> bool:
+    """
+    Sala 4 del diagrama: Sala de Sellos (conjuntos).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se superó la sala; False si el jugador perdió la partida.
+    """
+    return ejecutar_sala_estandar(jugador, 4, reto_sellos)
+ 
  
