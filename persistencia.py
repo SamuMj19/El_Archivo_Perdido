@@ -338,3 +338,56 @@ def _validar_fragmento(fragmento) -> tuple:
         if clave not in limpio:
             limpio[clave] = valor
     return True, limpio
+
+
+def _validar_estado_jugador(datos) -> tuple:
+    """
+    Valida el estado completo de un jugador (atributos tipados e inventario), ya sea el
+    diccionario que se desea guardar o el registro leído del archivo. Es la única
+    puerta de entrada y salida de datos, así nunca se escribe ni se carga información
+    con tipos incorrectos.
+
+    Parámetros:
+        datos (Any): Diccionario con las claves de CLAVES_JUGADOR.
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es un diccionario
+               limpio con nombre, vida, puntaje, nivel, partida_activa e inventario; si es
+               False, es un mensaje con el motivo.
+    """
+    if not isinstance(datos, dict):
+        return False, "Los datos del jugador no son un diccionario."
+
+    faltantes = [clave for clave in CLAVES_JUGADOR if clave not in datos]
+    if faltantes:
+        return False, "Faltan las claves: " + ", ".join(faltantes) + "."
+
+    exito, nombre = validar_nombre_jugador(datos["nombre"])
+    if not exito:
+        return False, nombre
+    if not _es_entero(datos["vida"]) or datos["vida"] < 0:
+        return False, "'vida' debe ser un entero mayor o igual a 0."
+    if not _es_numero_finito(datos["puntaje"]):
+        return False, "'puntaje' debe ser un número finito."
+    if not _es_entero(datos["nivel"]) or datos["nivel"] < 1:
+        return False, "'nivel' debe ser un entero mayor o igual a 1."
+    if not isinstance(datos["partida_activa"], bool):
+        return False, "'partida_activa' debe ser un valor booleano (true/false)."
+    if not isinstance(datos["inventario"], list):
+        return False, "'inventario' debe ser una lista."
+
+    inventario = []
+    for posicion, fragmento in enumerate(datos["inventario"], start=1):
+        exito, resultado = _validar_fragmento(fragmento)
+        if not exito:
+            return False, f"El fragmento #{posicion} es inválido: {resultado}"
+        inventario.append(resultado)
+
+    return True, {
+        "nombre": nombre,
+        "vida": datos["vida"],
+        "puntaje": float(datos["puntaje"]),
+        "nivel": datos["nivel"],
+        "partida_activa": datos["partida_activa"],
+        "inventario": inventario,
+    }
