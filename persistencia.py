@@ -492,3 +492,30 @@ def obtener_sala_guardada(jugador: dict) -> tuple:
         return False, (f"La sala guardada ({sala}) no existe: las salas válidas "
                        f"van de 1 a {NUMERO_SALAS}.")
     return True, sala
+
+
+# ==============================================================================
+# 4. SALA CENTRAL, PASO 1: CARGA DE LOS FRAGMENTOS RECOLECTADOS
+# ==============================================================================
+
+def cargar_fragmentos_recolectados(nombre: str, ruta: str = None) -> tuple:
+    """
+    Ejecuta el Paso 1 (Carga) de «La Reconstrucción del Catálogo»: lee desde el archivo
+    los fragmentos recolectados durante la partida, cada uno como diccionario. La lista
+    se entrega TAL CUAL fue guardada (incluidos los códigos repetidos), porque la
+    depuración con conjuntos es el Paso 2 y está en ejecutar_reconstruccion_catalogo()
+    de estructura.py, que debe poder contar cuántos duplicados se descartan.
+
+    Parámetros:
+        nombre (str): Nombre del jugador dueño del inventario.
+        ruta (str, opcional): Archivo JSON de partidas (por defecto RUTA_PARTIDAS).
+
+    Retorna:
+        tuple: Par (exito: bool, resultado). Si exito es True, 'resultado' es la lista de
+               diccionarios de fragmentos lista para ejecutar_reconstruccion_catalogo();
+               si es False, es un mensaje de error.
+    """
+    exito, resultado = cargar_partida(nombre, ruta)
+    if not exito:
+        return False, resultado
+    return True, resultado["inventario"]
