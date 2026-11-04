@@ -61,7 +61,8 @@ def convertir_y_validar(entrada_usuario:str, tipo_esperado:type):
         tipo_esperado(type): Tipo de dato al que se desea convertir (int, float, str, bool).
 
     Retorna:
-        tuple: Par (exito: bool, valor_convertido: Any) indicando si la conversión fue válida y el dato resultante (o None si falló).
+        tuple: Par (exito: bool, valor_convertido: Any) indicando si la conversión fue válida 
+        y el dato resultante (o None si falló).
     """
     texto_limpio=str(entrada_usuario).strip()
     try:
@@ -131,3 +132,34 @@ def consultar_atributo_fragmento(
     if not isinstance(fragmento, dict):
         return valor_por_defecto
     return fragmento.get(clave, valor_por_defecto)
+
+def consultar_ficha_con_excepcion(fragmento: dict, clave: str)->tuple:
+    """
+    Realiza la lectura directa de una clave sobre un diccionario capturando
+    la excepción KeyError en caso de que la clave sea inexistente.
+
+    Parámetros:
+        fragmento (dict): Diccionario del fragmento a inspeccionar.
+        clave (str): Clave que se intenta buscar directamente.
+
+    Retorna:
+        tuple: Par (encontrado: bool, resultado: Any) con el valor o mensaje de control.
+    """
+    try:
+        return True, fragmento[clave]
+    except KeyError:
+        return False, f"La clave '{clave}' no existe en la ficha consultada."
+
+
+def construir_catalogo_fichas(lista_fragmentos: list) -> dict:
+    """
+    Construye un diccionario de acceso rápido indexado por el código del fragmento
+    mediante comprensión de diccionarios (dict comprehension).
+
+    Parámetros:
+        lista_fragmentos (list): Lista de diccionarios de fragmentos.
+
+    Retorna:
+        dict: Diccionario donde cada clave es el 'codigo' (int) y el valor es el fragmento.
+    """
+    return {frag["codigo"]: frag for frag in lista_fragmentos if "codigo" in frag}
