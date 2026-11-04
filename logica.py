@@ -183,4 +183,206 @@ PREGUNTAS = {
                         "ABB se vuelve una cadena y buscar equivale a recorrer una lista."),
     },
 }
+
+
+# ==============================================================================
+# 2. ENTRADA Y SALIDA DE CONSOLA (VALIDACIÓN DE ENTRADAS)
+# ==============================================================================
+ 
+class AbandonarPartida(Exception):
+    """
+    Señal interna que indica que el jugador cerró la entrada (Ctrl+C o Ctrl+D). Permite
+    salir limpiamente desde cualquier punto del juego sin mostrar un traceback.
+    """
+ 
+ 
+def configurar_consola() -> None:
+    """
+    Evita que un terminal con codificación limitada detenga el juego al imprimir
+    tildes o símbolos: los caracteres no representables se reemplazan en vez de fallar.
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        None
+    """
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+ 
+ 
+def imprimir_titulo(texto: str) -> None:
+    """
+    Imprime un encabezado enmarcado para separar visualmente las fases del juego.
+ 
+    Parámetros:
+        texto (str): Título que se mostrará centrado entre dos líneas.
+ 
+    Retorna:
+        None
+    """
+    print()
+    print("=" * ANCHO_PANTALLA)
+    print(texto.center(ANCHO_PANTALLA))
+    print("=" * ANCHO_PANTALLA)
+ 
+ 
+def leer_texto(mensaje: str) -> str:
+    """
+    Lee una línea con input(), convirtiendo el cierre de la entrada (Ctrl+C o Ctrl+D)
+    en la excepción controlada AbandonarPartida.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador antes de leer.
+ 
+    Retorna:
+        str: Línea escrita por el jugador, sin el salto de línea final.
+    """
+    try:
+        return input(mensaje)
+    except (EOFError, KeyboardInterrupt):
+        print()
+        raise AbandonarPartida
+ 
+ 
+def leer_entero(mensaje: str, minimo: int = None, maximo: int = None) -> int:
+    """
+    Pide un número entero y repite la pregunta hasta recibir uno válido. Usa
+    convertir_y_validar_tipo() de estructura.py dentro de un bucle while, de modo que
+    un texto donde se espera un número nunca detiene el juego.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador.
+        minimo (int, opcional): Valor mínimo aceptado (inclusive).
+        maximo (int, opcional): Valor máximo aceptado (inclusive).
+ 
+    Retorna:
+        int: Número entero válido dentro del rango indicado.
+    """
+    while True:
+        exito, valor = convertir_y_validar_tipo(leer_texto(mensaje), int)
+        if not exito:
+            print("  Entrada inválida: escribe un número entero (por ejemplo, 42).")
+            continue
+        if (minimo is not None and valor < minimo) or (maximo is not None and valor > maximo):
+            limite_inferior = "-infinito" if minimo is None else minimo
+            limite_superior = "infinito" if maximo is None else maximo
+            print(f"  El número debe estar entre {limite_inferior} y {limite_superior}.")
+            continue
+        return valor
+ 
+ 
+def leer_flotante(mensaje: str) -> float:
+    """
+    Pide un número decimal finito y repite la pregunta hasta recibir uno válido. Se
+    rechazan «nan» e «inf», que float() acepta pero no sirven como respuesta.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador.
+ 
+    Retorna:
+        float: Número decimal finito.
+    """
+    while True:
+        exito, valor = convertir_y_validar_tipo(leer_texto(mensaje), float)
+        if exito and math.isfinite(valor):
+            return valor
+        print("  Entrada inválida: escribe un número (por ejemplo, 7.5).")
+ 
+ 
+def leer_booleano(mensaje: str) -> bool:
+    """
+    Pide una respuesta de tipo sí/no y repite la pregunta hasta recibir una válida.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador (por ejemplo, «... (si/no): »).
+ 
+    Retorna:
+        bool: True para sí, False para no.
+    """
+    while True:
+        exito, valor = convertir_y_validar_tipo(leer_texto(mensaje), bool)
+        if exito:
+            return valor
+        print("  Entrada inválida: responde «si» o «no».")
+ 
+ 
+def leer_conjunto_enteros(mensaje: str) -> set:
+    """
+    Pide una lista de enteros separados por comas o espacios y la entrega como conjunto
+    (los repetidos se eliminan solos). Repite la pregunta si algún elemento no es entero.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador.
+ 
+    Retorna:
+        set: Conjunto no vacío de enteros.
+    """
+    while True:
+        fichas = leer_texto(mensaje).replace(",", " ").split()
+        resultados = [convertir_y_validar_tipo(ficha, int) for ficha in fichas]
+        if fichas and all(exito for exito, _ in resultados):
+            return {valor for _, valor in resultados}
+        print("  Entrada inválida: escribe números enteros separados por comas (ej. 3, 8, 12).")
+ 
+ 
+def leer_movimientos(mensaje: str) -> list:
+    """
+    Pide una secuencia de movimientos N (arriba), S (abajo), E (derecha) y O (izquierda),
+    con o sin separadores, y repite la pregunta si hay letras no válidas.
+ 
+    Parámetros:
+        mensaje (str): Texto que se muestra al jugador.
+ 
+    Retorna:
+        list: Lista de letras mayúsculas, cada una una clave de MOVIMIENTOS.
+    """
+    while True:
+        texto = leer_texto(mensaje).upper()
+        letras = [c for c in texto if not c.isspace() and c not in ",;-"]
+        invalidas = sorted({c for c in letras if c not in MOVIMIENTOS})
+        if not letras:
+            print("  Escribe al menos un movimiento (N, S, E u O).")
+        elif invalidas:
+            print(f"  Movimientos no válidos: {' '.join(invalidas)}. Usa solo N, S, E u O.")
+        elif len(letras) > MAXIMO_MOVIMIENTOS:
+            print(f"  Demasiados movimientos: el máximo es {MAXIMO_MOVIMIENTOS}.")
+        else:
+            return letras
+ 
+ 
+def pausar() -> None:
+    """
+    Detiene la ejecución hasta que el jugador presione Enter, para que cada paso de la
+    Sala Central sea visible antes de continuar con el siguiente.
+ 
+    Parámetros:
+        Ninguno.
+ 
+    Retorna:
+        None
+    """
+    leer_texto("  (Enter para continuar) ")
+ 
+ 
+def mostrar_fragmentos(fragmentos: list) -> None:
+    """
+    Imprime una lista de fragmentos como tabla (posición, código, título y valor).
+ 
+    Parámetros:
+        fragmentos (list): Lista de diccionarios de fragmentos.
+ 
+    Retorna:
+        None
+    """
+    if not fragmentos:
+        print("  (sin fragmentos)")
+        return
+    print(f"  {'Pos':>3}  {'Código':>6}  {'Título':<32}  {'Valor':>6}")
+    for posicion, fragmento in enumerate(fragmentos):
+        print(f"  {posicion:>3}  {fragmento['codigo']:>6}  "
+              f"{fragmento['titulo']:<32}  {fragmento['valor']:>6.1f}")
  
