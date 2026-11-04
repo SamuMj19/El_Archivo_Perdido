@@ -573,3 +573,154 @@ def generar_eco_duplicado(jugador: dict) -> None:
     insertar_fragmento_lista(jugador["inventario"], eco)
     print(f"  El índice corrupto dejó una COPIA repetida del fragmento #{eco['codigo']} "
           "en tu inventario. La Sala Central se encargará de depurarla.")
+
+    
+# ==============================================================================
+# 4. SALA 1: ESTANTERÍAS (LISTAS)
+# ==============================================================================
+ 
+def reto_estanterias(jugador: dict) -> bool:
+    """
+    Reto de la Sala 1: eliminar un registro dañado, insertar un fragmento nuevo en su
+    posición correcta de una lista ordenada, buscar el fragmento de mayor valor y filtrar
+    con una comprensión de listas. Cada paso se reintenta por separado (con -1 de vida
+    por fallo) y solo modifica la lista cuando se resuelve bien.
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se completaron los cuatro pasos; False si se agotó la vida.
+    """
+    inventario = [crear_fragmento(c, t, NOMBRE_SALAS[1], v) for c, t, v in INVENTARIO_PRELIMINAR]
+    random.shuffle(inventario)
+    codigo_extra, titulo_extra, valor_extra = FRAGMENTO_EXTRA_SALA_1
+    extra = crear_fragmento(codigo_extra, titulo_extra, NOMBRE_SALAS[1], valor_extra)
+ 
+    print("\n  Inventario preliminar (desordenado):")
+    mostrar_fragmentos(inventario)
+ 
+    # Paso A: eliminación con .remove()
+    print("\n  Paso A (eliminación): un fragmento está dañado (valor 0.0).")
+ 
+    def intento_eliminar() -> bool:
+        """
+        Pide el código del fragmento dañado y lo elimina con remove() solo si realmente está dañado.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        codigo = leer_entero("  Código del fragmento dañado que quieres eliminar: ")
+        candidato = next((f for f in inventario if f["codigo"] == codigo), None)
+        if candidato is None:
+            print("  No hay ningún fragmento con ese código en la lista.")
+            return False
+        if candidato["valor"] > 0:
+            print("  Ese fragmento está sano: no se elimina.")
+            return False
+        eliminar_fragmento_lista(inventario, codigo)
+        print(f"  Fragmento #{codigo} eliminado con remove().")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_eliminar):
+        return False
+ 
+    # Paso B: ordenamiento con .sort() e inserción en la posición correcta
+    ordenar_inventario_lista(inventario, "codigo")
+    print("\n  Paso B (ordenamiento e inserción): la lista se ordenó por código con sort().")
+    mostrar_fragmentos(inventario)
+    print(f"  Llega un fragmento nuevo: #{extra['codigo']} «{extra['titulo']}».")
+    print("  Insértalo en la posición que mantenga la lista ordenada por código.")
+ 
+    def intento_insertar() -> bool:
+        """
+        Pide la posición de inserción y la acepta solo si la lista conserva el orden por código.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        posicion = leer_entero(f"  Posición de inserción (0 a {len(inventario)}): ",
+                               0, len(inventario))
+        prueba = list(inventario)
+        insertar_fragmento_lista(prueba, extra, posicion)
+        codigos = [f["codigo"] for f in prueba]
+        if codigos != sorted(codigos):
+            print("  Con esa posición la lista deja de estar ordenada.")
+            return False
+        insertar_fragmento_lista(inventario, extra, posicion)
+        print(f"  Insertado en la posición {posicion} con insert().")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_insertar):
+        return False
+ 
+    # Paso C: búsqueda del fragmento de mayor valor
+    print("\n  Paso C (búsqueda): revisa la lista actual.")
+    mostrar_fragmentos(inventario)
+    mejor = max(inventario, key=lambda f: f["valor"])
+ 
+    def intento_buscar() -> bool:
+        """
+        Pide el código del fragmento de mayor valor y lo compara con el resultado de la búsqueda.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        codigo = leer_entero("  ¿Qué código tiene el fragmento de MAYOR valor? ")
+        if codigo != mejor["codigo"]:
+            print("  Ese no es el fragmento de mayor valor.")
+            return False
+        print(f"  Correcto: #{mejor['codigo']} con valor {mejor['valor']}.")
+        return True
+ 
+    if not superar_con_reintentos(jugador, intento_buscar):
+        return False
+ 
+    # Paso D: filtrado con comprensión de listas
+    print("\n  Paso D (comprensión de listas): se aplicará")
+    print("      [f for f in inventario if f['valor'] >= umbral]")
+    print(f"  Elige un umbral para que queden EXACTAMENTE {FRAGMENTOS_ESPERADOS_FILTRO} fragmentos.")
+ 
+    def intento_filtrar() -> bool:
+        """
+        Pide un umbral y comprueba que el filtrado con comprensión de listas deje la cantidad exigida.
+ 
+        Parámetros:
+            Ninguno.
+ 
+        Retorna:
+            bool: True si el intento fue exitoso; False si falló (cuesta 1 de vida).
+        """
+        umbral = leer_flotante("  Umbral de valor: ")
+        filtrados = filtrar_fragmentos_por_valor(inventario, umbral)
+        if len(filtrados) != FRAGMENTOS_ESPERADOS_FILTRO:
+            print(f"  Con ese umbral quedan {len(filtrados)} fragmentos.")
+            return False
+        print(f"  Quedaron {len(filtrados)} fragmentos: "
+              f"{[f['codigo'] for f in filtrados]}.")
+        return True
+ 
+    return superar_con_reintentos(jugador, intento_filtrar)
+ 
+ 
+def sala_estanterias(jugador: dict) -> bool:
+    """
+    Sala 1 del diagrama: Sala de Estanterías (listas).
+ 
+    Parámetros:
+        jugador (dict): Diccionario con el estado del jugador.
+ 
+    Retorna:
+        bool: True si se superó la sala; False si el jugador perdió la partida.
+    """
+    return ejecutar_sala_estandar(jugador, 1, reto_estanterias)
+ 
